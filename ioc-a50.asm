@@ -21,27 +21,27 @@ rambase	equ	04000h
 
 	org	rambase
 cursor	ds	2	; pointer into screen buffer for cursor loc
-d4002	ds	1
-d4003	ds	1
-d4004	ds	1
-d4005	ds	1
-d4006	ds	1
-d4007	ds	1
-d4008	ds	1
-d4009	ds	1
-d400a	ds	1
+r4002	ds	1
+r4003	ds	1
+r4004	ds	1
+r4005	ds	1
+r4006	ds	1
+r4007	ds	1
+r4008	ds	1
+r4009	ds	1
+r400a	ds	1
 
 	org	040d0h
-d40d0	ds	2
-d40d2	ds	2
+r40d0	ds	2
+r40d2	ds	2
 
 	org	041f7h
 moshad	ds	1	; RAM shadow of miscout register
 
-d41f8	ds	1
-d41f9	ds	1
+r41f8	ds	1
+r41f9	ds	1
 	ds	1
-d41fb	ds	2
+r41fb	ds	2
 
 	org	05230h
 scrbeg	ds	24*80	; start of screen buffer
@@ -49,7 +49,7 @@ scrend:			; ends at 05a00h (last byte used 059ffh)
 
 crsrfmt	equ	05af5h
 
-d5af7	equ	05af7h
+r5af7	equ	05af7h
 
 rst1	equ	05fa8h
 rst2	equ	05fabh
@@ -112,7 +112,7 @@ crtini:	push	b
 	jmp	rst7
 
 
-l003b:	lda	d5af7
+l003b:	lda	r5af7
 	mov	c,a
 	mvi	a,00ah
 	jmp	l01ec
@@ -434,7 +434,7 @@ l01ed:	mov	m,c
 	ret
 
 
-l0202:	lda	d5af7
+l0202:	lda	r5af7
 	mov	c,a
 	mov	b,a
 s0207:	lxi	h,scrbeg
@@ -469,7 +469,7 @@ l0226:	mvi	m,04fh
 s022c:	mov	a,c
 	xchg
 	mvi	c,008h
-l0230:	mvi	m,030h
+	mvi	m,030h
 	ral
 	jnc	l0238
 	mvi	m,031h
@@ -538,7 +538,7 @@ l0286:	in	miscin
 	jnz	l0286
 	jmp	$
 
-l0296:	shld	d40d0
+l0296:	shld	r40d0
 	mov	d,h	
 	mov	e,l	
 l029b:	in	crtstat
@@ -551,7 +551,7 @@ l029b:	in	crtstat
 	jnz	l029b
 	jmp	$
 
-l02ab:	shld	d40d2
+l02ab:	shld	r40d2
 	mov	a,e	
 	sub	l	
 	mov	a,d
@@ -567,7 +567,7 @@ l02ab:	shld	d40d2
 	jz	002c3h
 
 	mvi	c,08fh
-l02c3:	mov	a,c	
+	mov	a,c	
 	sub	e	
 	jc	$
 	ret
@@ -795,7 +795,7 @@ l04d8:	call	s080c
 l04f7:	call	s0806
 	call	s0806
 	mvi	l,d0402ln
-	lxi	d,d41f8
+	lxi	d,r41f8
 	lxi	b,d0402
 l0505:	ldax	b
 	stax	d
@@ -804,39 +804,39 @@ l0505:	ldax	b
 	dcr	l
 	jnz	l0505
 
-	lxi	h,d4002
+	lxi	h,r4002
 	mvi	m,000h
 l0512:	mvi	a,maxtrk-1
-	lxi	h,d4002
+	lxi	h,r4002
 	cmp	m
 	jc	l0536
 
-	lda	d4002
-	sta	d41fb
+	lda	r4002
+	sta	r41fb
 	call	s0803
 	call	s05db
 	rar
 	jnc	l052c
 	ret
 
-l052c:	lda	d4002
+l052c:	lda	r4002
 	inr	a	
-	sta	d4002
+	sta	r4002
 	jnz	l0512
 
-l0536:	lxi	h,d41f9
+l0536:	lxi	h,r41f9
 	mvi	m,006h
 	inx	h	
 	mvi	m,003h
-	lxi	h,d4002
+	lxi	h,r4002
 	mvi	m,000h
 
 l0543:	mvi	a,009h
-	lxi	h,d4002
+	lxi	h,r4002
 	cmp	m
 	jc	l0582
 
-	lhld	d4002
+	lhld	r4002
 	mvi	h,000h
 	lxi	b,d0372
 	dad	h
@@ -845,9 +845,9 @@ l0543:	mvi	a,009h
 	inx	h	
 	mov	d,m
 	xchg
-	shld	d41fb
+	shld	r41fb
 
-	lhld	d4002
+	lhld	r4002
 	mvi	h,000h
 	lxi	b,d0372
 	dad	h
@@ -862,22 +862,22 @@ l0543:	mvi	a,009h
 	jnc	l0578
 	ret	
 
-l0578:	lda	d4002
+l0578:	lda	r4002
 	inr	a
-	sta	d4002
+	sta	r4002
 	jnz	l0543
 
-l0582:	lxi	h,d41f9
+l0582:	lxi	h,r41f9
 	mvi	m,004h
-	lxi	h,d4002
+	lxi	h,r4002
 	mvi	m,000h
 
 l058c:	mvi	a,009h
-	lxi	h,d4002
+	lxi	h,r4002
 	cmp	m
 	jc	l05d7
 
-	lhld	d4002
+	lhld	r4002
 	mvi	h,000h
 	lxi	b,d0372
 	dad	h
@@ -886,14 +886,14 @@ l058c:	mvi	a,009h
 	inx	h
 	mov	d,m
 	xchg
-	shld	d41fb
+	shld	r41fb
 	call	s0803
 	call	s05db
 	rar
 	jnc	l05b1
 	ret
 	
-l05b1:	lhld	d4002
+l05b1:	lhld	r4002
 	mvi	h,000h
 	lxi	b,d0372
 	dad	h
@@ -910,9 +910,9 @@ l05b1:	lhld	d4002
 	call	s024a
 	ret
 
-l05cd:	lda	d4002
+l05cd:	lda	r4002
 	inr	a
-	sta	d4002
+	sta	r4002
 	jnz	l058c
 
 l05d7:	call	s04a4
@@ -920,7 +920,7 @@ l05d7:	call	s04a4
 
 
 s05db:	call	s0809
-	sta	d4003
+	sta	r4003
 	cpi	000h
 	jnz	l05e9
 	mvi	a,000h
@@ -935,7 +935,7 @@ l05e9:	lxi	b,m03bf
 	mvi	a,050h
 	call	s07d7
 	xchg
-	lhld	d4003
+	lhld	r4003
 	mov	c,l	
 	call	s022c
 	mvi	a,0ffh
@@ -944,13 +944,13 @@ l05e9:	lxi	b,m03bf
 
 dggen:	call	s049a
 	call	romt8k
-	sta	d4004
+	sta	r4004
 	cpi	004h
 	jnc	l0624
 	
 	lxi	b,00412h
 	call	s024a
-	lda	d4004
+	lda	r4004
 	adi	030h
 	sta	scrbeg+4
 	ret	
@@ -961,12 +961,12 @@ l0624:	call	s04a4
 
 dgkbd:	call	s02c9
 l062b:	call	s0267
-	sta	d4005
+	sta	r4005
 	sui	01bh
 	adi	0ffh
 	sbb	a
 	push	psw
-	lda	d4005
+	lda	r4005
 	sui	020h
 	adi	0ffh
 	sbb	a
@@ -978,22 +978,22 @@ l062b:	call	s0267
 	
 	lxi	h,scrbeg
 	shld	cursor
-	lhld	d4005
+	lhld	r4005
 	mov	c,l	
-	lxi	d,d4006
+	lxi	d,r4006
 	call	s020f
-	lda	d4006
+	lda	r4006
 	cpi	020h
 	jnz	l0664
 
-	lda	d4007
-	sta	d4006
+	lda	r4007
+	sta	r4006
 
-l0664:	lhld	d4006
+l0664:	lhld	r4006
 	mov	b,h
 	mov	c,l
 	call	s0207
-	lda	d4005
+	lda	r4005
 	ani	080h
 	cpi	000h
 	jz	l067c
@@ -1013,7 +1013,7 @@ l0683:	call	s100c
 	lxi	b,003b6h
 	call	s015d
 	in	crtstat
-	sta	d4008
+	sta	r4008
 
 ; wait until CRTC interrupt request
 l0696:	in	crtstat
@@ -1049,14 +1049,14 @@ l06a2:	mvi	a,000h
 	call	s024a
 	call	s0278
 
-	lxi	h,d4009	; clear response counter
+	lxi	h,r4009	; clear response counter
 	mvi	m,000h
 
 l06e9:	mvi	a,004h
-	lxi	h,d4009
+	lxi	h,r4009
 	cmp	m	
 	jc	l07ca
-	lda	d4009
+	lda	r4009
 	cpi	003h
 	jnz	l0724
 
@@ -1064,13 +1064,13 @@ l06e9:	mvi	a,004h
 	call	s024a
 l0700:	call	s0267
 	ani	0dfh		; fold LC to UC
-	sta	d400a
-	lda	d400a
+	sta	r400a
+	lda	r400a
 	cpi	'N'
 	jnz	l0713		; why isn't this just a jz l07ca?
 	jmp	l07ca
 
-l0713:	lda	d400a
+l0713:	lda	r400a
 	cpi	'Y'
 	jz	l071e		; why isn't this just a jnz l0700
 	jmp	l0700
@@ -1078,8 +1078,8 @@ l0713:	lda	d400a
 l071e:	lxi	b,mkfprm
 	call	s024a
 l0724:	call	s0267
-	sta	d400a
-	lhld	d4009
+	sta	r400a
+	lhld	r4009
 	mvi	h,000h
 	lxi	b,d0386
 	dad	b
@@ -1091,7 +1091,7 @@ l0724:	call	s0267
 	mov	c,m
 	pop	d	
 	call	s020f
-	lhld	d4009
+	lhld	r4009
 	mvi	h,000h
 	lxi	b,d0386
 	dad	b
@@ -1107,21 +1107,21 @@ l0724:	call	s0267
 	lhld	cursor
 	dad	d
 	xchg
-	lhld	d400a
+	lhld	r400a
 	mov	c,l	
 	call	s020f
 	lxi	d,00017h
 	lhld	cursor
 	dad	d	
 	xchg
-	lhld	d400a
+	lhld	r400a
 	mov	c,l	
 	call	s022c
-	lhld	d4009
+	lhld	r4009
 	mvi	h,000h
 	lxi	b,d0386
 	dad	b
-	lda	d400a
+	lda	r400a
 	cmp	m
 	jz	l07b6
 
@@ -1141,11 +1141,11 @@ l0795:	ldax	b
 	dcr	l	
 	jnz	l0795
 
-	lhld	d4009
+	lhld	r4009
 	mvi	h,000h
 	lxi	b,d0386
 	dad	b
-	lda	d400a
+	lda	r400a
 	xra	m	
 	lxi	d,00029h
 	lhld	cursor
@@ -1158,9 +1158,9 @@ l07b6:	lxi	d,00050h
 	lhld	cursor
 	dad	d	
 	shld	cursor
-	lda	d4009
+	lda	r4009
 	inr	a	
-	sta	d4009
+	sta	r4009
 	jnz	l06e9
 
 l07ca:	call	s04ab
