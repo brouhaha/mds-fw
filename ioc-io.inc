@@ -27,7 +27,7 @@ kbpres	equ	080h	; keyboard present if 1
 kbddat	equ	090h	; read keyboard data
 kbdstat	equ	092h	; read keyboard status
 
-status	equ	0a0h	; read DBB status (flags)
+dbbstat	equ	0a0h	; read DBB status (flags)
 dbbin	equ	0b0h	; read DBB input buffer, reset IBF flag
 
 ; 8271 floppy disk controller

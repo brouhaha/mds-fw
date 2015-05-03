@@ -1,8 +1,8 @@
 	cpu	8080
 
-	include	ioc_io.inc
-	include	ioc_flp.inc
-	include ioc_mac.inc
+	include	ioc-io.inc
+	include	ioc-flp.inc
+	include ioc-mac.inc
 
 ; entry points in ROM 1
 l0800	equ	00800h
