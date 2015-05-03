@@ -10,7 +10,7 @@ strtbel	equ	050h	; start bell timer
 miscout	equ	060h	; write to miscellaneous output register
 bellen	equ	001h	; bell enable
 mastint	equ	002h	; master interrupt
-unused4	equ	004h	; unknown output (maybe used in IOC-III?)
+unkout4	equ	004h	; unknown output (maybe used in IOC-III?)
 dmaena	equ	020h	; DMA enable
 
 miscin	equ	080h	; read miscellaneous data
