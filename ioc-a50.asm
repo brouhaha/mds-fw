@@ -120,7 +120,7 @@ l003b:	lda	r5af7
 	
 reset:	sub	a
 	out	crtcmd
-	out	0fdh		; DMA mode with extra address bits set?
+	out	dmamclr		; DMAC master clear (8237 only)
 	mvi	a,020h
 	sta	crsrfmt
 	mvi	a,dmaena+mastint
@@ -158,31 +158,33 @@ l005b:	mvi	a,tmsrfsh+trboth+trategn  ; refresh timer to rate gen mode and load
 
 	out	010h		; XXX does nothing?
 
-	in	0fdh		; DMA status with extra address bits set?
-	sui	001h
-	sbb	a	
-	ani	dmaen2
-	out	dmamode
+	in	dmactmp		; DMAC temp reg (8237 only, 8257 reads 0ffh)
+	sui	001h		; set borrow if read as 000h (8237)
+	sbb	a		; A=000h if 8257, A=0ffh if 8237
+	ani	004h		; A=000h if 8257, A=004h if 8237
+	out	dmamode		; write 000h to disable all channels if 8257
+				; write 004h to disable controller if 8237
 
-	sub	a
-	out	0fch		; DMA mode set with extra address bit set?
+	sub	a		; A=000h
+	out	dmaclbp		; NOP (8257), DMA clear byte pointer (8237)
 	out	dmac0a
 	out	dmac0a
 	out	dmac0tc
 	out	dmac0tc
 
-	mvi	a,dtcstop+drotpri
-	out	0fbh		; DMA mode set with extra address bits set?
+	mvi	a,050h		; single mode, addr incr, autoinit enable,
+				;   verify transfer, chan 0 select
+	out	dmawmod		; NOP (8257), DMA write mode register (8237)
 
-	mvi	a,dmaen3+dmaen2+dmaen1
-	out	0ffh		; DMA mode set with extra address bits set?
+	mvi	a,00eh		; set channel 1, 2, 3 mask bits (disable DRQ)
+	out	dmawamr		; NOP (8257) DMA write all mask register (8237)
 
-	in	0fdh		; DAM status with extra address bits set?
-	adi	0ffh
-	sbb	a
-	ori	dextwrt
-	ani	dautold+dextwrt+dmaen0
-	out	dmamode
+	in	dmactmp		; DMAC temp reg (8237 only, 8257 reads 0ffh)
+	adi	0ffh		; set carry if non-zero (8257)
+	sbb	a		; A=000h (8237), A=0ffh (8257)
+	ori	dextwrt		; (8257), ??? (8237)
+	ani	dautold+dextwrt+dmaen0	; (8257), ??? (8237)
+	out	dmamode		; mode set (8257), command (8237)
 	
 	in	miscin
 	ani	diagmd
@@ -562,12 +564,12 @@ l02ab:	shld	r40d2
 	jnz	$
 
 	mvi	c,09dh
-	in	0fdh		; DMA status with extra address bits set?
+	in	dmactmp		; DMAC temp reg (8237 only, 8257 reads 0ffh)
 	ana	a	
-	jz	002c3h
+	jz	l02c3
 
 	mvi	c,08fh
-	mov	a,c	
+l02c3:	mov	a,c	
 	sub	e	
 	jc	$
 	ret
@@ -642,8 +644,9 @@ l02ff:	mvi	a,unused4
 
 	in	miscin		; check for undocumented misc input
 	xra	b		; why XOR with previous miscin?
-	ani	unkin10		; XXX check for unconnected bit?
-	jz	l0314		; XXX will always happen, since bit doesn't change?
+
+	ani	unkin10		; unknown bit, perhaps detects IOC-III?
+	jz	l0314
 
 	mov	a,e		; move underline up one line
 	sui	010h

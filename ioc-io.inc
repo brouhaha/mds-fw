@@ -1,6 +1,7 @@
 ; I/O ports
 
 dbbout	equ	000h	; write to DBB output buffer, set/reset OBF flag
+unkp10	equ	010h	; port 10h, unknown (maybe used in IOC-III?)
 iocbusy	equ	020h	; set/reset IOC busy flag
 setcd	equ	030h	; set F1 command/data flag: status to IPB/IPC
 clrcd	equ	040h	; reset F1 command/data flag: data to IPB/IPC
@@ -9,7 +10,7 @@ strtbel	equ	050h	; start bell timer
 miscout	equ	060h	; write to miscellaneous output register
 bellen	equ	001h	; bell enable
 mastint	equ	002h	; master interrupt
-unused4	equ	004h	; doesn't appear connected on schematic?
+unused4	equ	004h	; unknown output (maybe used in IOC-III?)
 dmaena	equ	020h	; DMA enable
 
 miscin	equ	080h	; read miscellaneous data
@@ -17,7 +18,7 @@ hz50	equ	001h	; 50Hz if 1
 flppres	equ	002h	; floppy present if 1
 belltmr	equ	004h	; bell timer
 localmd	equ	008h	; local mode if 1 (vs online, debug)
-unkin10	equ	010h	; unconnected input, purpose unknown
+unkin10	equ	010h	; unconnected input (maybe used in IOC-III?)
 diagmd	equ	020h	; diag mode if 1 (vs online, local)
 testpt	equ	040h	; test point, J18-10
 kbpres	equ	080h	; keyboard present if 1
@@ -88,7 +89,7 @@ trlsb	equ	010h	; read/load least significant byte only
 trboth	equ	030h	; read/load least sig, then most sig byte
 
 
-; 8257 DMA controller
+; 8257 DMA controller (alt. 8237 DMA controller)
 ; DMA channel 0 - used for DRAM refresh
 dmac0a	equ	0f0h	; address (in/out)
 dmac0tc	equ	0f1h	; terminal count (in/out)
@@ -106,8 +107,17 @@ dmac3a	equ	0f6h	; address (in/out)
 dmac3tc	equ	0f7h	; terminal count (in/out)
 
 dmastat	equ	0f8h	; DMA status (in)
-dmamode	equ	0f8h	; DMA mode set (out)
+dmamode	equ	0f8h	; DMA mode set (out, 8257), command (out, 8237 only)
 
+dmawreq	equ	0f9h	; DMA write request register (out, 8237 only)
+dmawsmr	equ	0fah	; DMA write single masig reg bit (out, 8237 only)
+dmawmod	equ	0fbh	; DMA write mode register (out, 8237 only)
+dmaclbp	equ	0fch	; DMA clear byte pointer FF (out, 8237 only)
+dmactmp	equ	0fdh	; DMA temporary register (in, 8237 only)
+dmamclr	equ	0fdh	; DMA master clear (out, 8237 only)
+dmawamr	equ	0ffh	; DMA write all mask register bits (out, 8237 only)
+
+; 8257 mode set bits (NOT the same as 8237 mode register bits):
 dautold	equ	080h
 dtcstop	equ	040h
 dextwrt	equ	020h
