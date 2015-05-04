@@ -1,7 +1,7 @@
 ; I/O ports
 
 dbbout	equ	000h	; write to DBB output buffer, set/reset OBF flag
-unkp10	equ	010h	; port 10h, unknown (maybe used in IOC-III?)
+unkp10	equ	010h	; end delayed reset (early IOC only)
 iocbusy	equ	020h	; set/reset IOC busy flag
 setcd	equ	030h	; set F1 command/data flag: status to IPB/IPC
 clrcd	equ	040h	; reset F1 command/data flag: data to IPB/IPC
@@ -13,6 +13,7 @@ mastint	equ	002h	; master interrupt
 unkout4	equ	004h	; unknown output (maybe used in IOC-III?)
 dmaena	equ	020h	; DMA enable
 
+; 07xh not used
 miscin	equ	080h	; read miscellaneous data
 hz50	equ	001h	; 50Hz if 1
 flppres	equ	002h	; floppy present if 1
