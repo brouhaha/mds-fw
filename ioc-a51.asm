@@ -6,7 +6,7 @@
 	
 ; entry points in ROM 0
 
-s000b	equ	0000bh
+s000b	equ	0000bh	; RAM test
 romt2c	equ	0002bh
 
 ; entry points in ROM 2
@@ -26,19 +26,54 @@ s181b	equ	0181bh
 
 ; RAM, 4000h..5fffh
 
-	org	04102h
+	org	04000h
+	ds	128
+stack:
+
+	org	04101h
+r4101:	ds	1
 iopbcnt	ds	1	; count of IOPB bytes received
+r4103:	ds	1
+r4104:	ds	1
+r4105:	ds	1
+r4106:	ds	1
+	ds	1
+	ds	1
+r4109:	ds	1
+r410a:	ds	1
+r410b:	ds	2
+r410d:	ds	1
+r410e:	ds	1
+r410f:	ds	1
+r4110:	ds	1
+r4111:	ds	1
 
-	org	041f1h
+	org	041ech
+r41ec:	ds	1
+r41ed:	ds	1
+r41ee:	ds	1
+r41ef:	ds	1
+intena:	ds	1	; interrupt enables
 systatb	ds	1
+dstatb:	ds	1
+crtstb:	ds	1	; CRT status byte
+r41f4:	ds	1
+r41f5:	ds	1
+r41f6:	ds	1
+moshad:	ds	1	; RAM shadow of miscout register
+iopb:	ds	iopbsiz
+r41fd:	ds	1
+r41fe:	ds	1
+dskstb:	ds	1	; diskette status byte
 
-	org	041f7h
-moshad	ds	1	; RAM shadow of miscout register
-iopb	ds	iopbsiz
+databf:	ds	26*128	; 04200h through 04f00h
 
 	org	05230h
-scrbeg	ds	24*80	; start of screen buffer
+scrbeg:	ds	24*80	; start of screen buffer
 scrend:			; ends at 05a00h (last byte used 059ffh)
+
+	org	05af4h
+r5af4:	ds	1
 
 ; DBB command byte
 cdbbrqi	equ	080h	; host requests that IOC generate command completion interrupt
@@ -74,6 +109,29 @@ illcmd	equ	040h	; illegal command code received from master
 illdat	equ	020h	; unexpected data from master, or cmd when data expected
 illmsk	equ	010h	; illegal interrupt reset mask from SRQDAK command
 ; bits 3..0 reserved
+
+; DSTAT bits
+dskerr	equ	080h
+kbderr	equ	040h
+crterr	equ	020h
+; bits 4..3 reserved
+dskint	equ	004h
+kbdint	equ	002h
+crtint	equ	001h
+
+; CRTS bits
+crtils	equ	040h
+crtild	equ	020h
+crtprs	equ	001h
+
+; diskette status byte
+; bits 7, 4, 0 reserved
+fdsils	equ 	040h	; illegal status
+fdsild	equ	020h	; illegal data
+fdsprs	equ	008h	; drive present
+fdscmp	equ	004h	; operation complete
+fdsrdy	equ	002h	; drive ready
+fdsrs0	equ	001h	; reserved bit, unknown purpose
 
 	org	00800h
 
@@ -135,7 +193,7 @@ s083f:	lxi	h,moshad
 ; E = low byte of count-1 (127 for single density sector)
 s0848:	di	
 	mvi	d,000h
-	lda	041f5h
+	lda	r41f5
 	mov	h,a
 	rrc
 	rrc
@@ -196,13 +254,13 @@ s088e:	mvi	b,maxsect
 
 l0898:	mov	a,m
 	stax	d
-	dcx	h	
+	dcx	h
 	dcx	h
 	dcx	d
 	dcx	d
 	dcx	d
 	dcx	d
-	dcr	b	
+	dcr	b
 	jnz	l0898
 
 	pop	h		; restore pointers for second pass
@@ -213,7 +271,7 @@ l0898:	mov	a,m
 	jnz	l08b4		; no
 
 ; set up remap for format
-l08ab:	mov	m,b	
+l08ab:	mov	m,b
 	dcx	h
 	dcx	h
 	dcx	h
@@ -221,9 +279,9 @@ l08ab:	mov	m,b
 	dcr	b
 	jnz	l08ab
 
-l08b4:	lxi	h,04200h
+l08b4:	lxi	h,databf
 	mvi	b,maxsect
-	lda	041fbh
+	lda	iopb+iopbotk
 	mvi	c,000h
 l08be:	mov	m,a
 	inx	h
@@ -295,7 +353,8 @@ cmd0e:	mov	a,c
 
 
 ; cmd 00d - load memory from master
-cmd0d:	lda	05af4h
+; Only allowed if RAM loc r5af4 contains 024h. But how can one set that?
+cmd0d:	lda	r5af4
 	cpi	024h
 	jnz	badcmd
 
@@ -452,7 +511,7 @@ badcmd:	lda	systatb
 
 
 s09e7:	in	kbdstat
-	sta	04103h
+	sta	r4103
 	rar
 	jnc	l09f9
 
@@ -473,25 +532,25 @@ srq:	lda	moshad
 	ret	
 
 
-xs080f:	lda	041efh
+xs080f:	lda	r41ef
 	ani	007h
-	lxi	h,041f2h
+	lxi	h,dstatb
 	ora	m
 	mov	m,a	
 	call	srq
-	lxi	h,041eeh
+	lxi	h,r41ee
 	mvi	m,0ffh
 	ret
 
 
-s0a1a:	lda	041edh
+s0a1a:	lda	r41ed
 	ani	080h
 	cpi	000h
 	jz	l0a2c
 
-	lda	041efh
+	lda	r41ef
 	ori	004h
-	sta	041efh
+	sta	r41ef
 l0a2c:	ret
 
 
@@ -502,7 +561,7 @@ wpbcc:	mvi	a,005h		; check if full IOPB already received
 	cmp	m
 	jc	l0a56		; yes, error
 
-	lxi	b,041ffh
+	lxi	b,dskstb	; address in which to set illegal data flag
 	call	mget1d
 	lhld	iopbcnt
 	mvi	h,000h
@@ -526,10 +585,10 @@ l0a56:	ret
 ; bit 5 - illegal data transfer
 ; bit 4 - illegal interrupt mask
 ; bits 3..0 - reserved
-systat:	lda	041f4h
-	lxi	h,041f3h
+systat:	lda	r41f4
+	lxi	h,crtstb
 	ana	m
-	lxi	h,041ffh
+	lxi	h,dskstb
 	ana	m	
 	ani	0f0h
 	cpi	000h
@@ -559,35 +618,40 @@ l0a71:	lda	systatb		; output systat byte
 ; bit 2 - diskette interrupt
 ; bit 1 - keyboard interrupt
 ; bit 0 - CRT interrupt
-dstat:	lda	041f3h
+dstat:	lda	crtstb
 	ani	0f0h
 	cpi	000h
 	jz	l0a93
 
-	lda	041f2h
-	ori	020h
-	sta	041f2h
-l0a93:	lda	041f4h
+	lda	dstatb
+	ori	crterr
+	sta	dstatb
+
+l0a93:	lda	r41f4
 	ani	0f0h
 	cpi	000h
 	jz	l0aa5
 
-	lda	041f2h
-	ori	040h
-	sta	041f2h
-l0aa5:	lda	041ffh
+	lda	dstatb
+	ori	kbderr
+	sta	dstatb
+
+l0aa5:	lda	dskstb
 	ani	0f0h
 	cpi	000h
 	jz	l0ab7
 
-	lda	041f2h
-	ori	080h
-	sta	041f2h
-l0ab7:	lda	041f2h
-	cma
+	lda	dstatb
+	ori	dskerr
+	sta	dstatb
+
+l0ab7:	lda	dstatb		; send DSTAT to master
+	cma			; (hw negative logic)
 	out	dbbout
-	lxi	h,041f2h
+
+	lxi	h,dstatb	; clear DSTAT
 	mvi	m,000h
+
 	mvi	a,000h
 	out	clrcd
 	ret
@@ -600,11 +664,11 @@ l0ab7:	lda	041f2h
 ; bit 0 - CRT interrupt reset
 srqdak:	lxi	b,systatb
 	call	mget1d
-	sta	04101h
-	lda	04101h
+	sta	r4101
+	lda	r4101		; superfluous!
 	ani	007h
 	push	psw
-	lda	041efh
+	lda	r41ef
 	cma
 	pop	b
 	mov	c,b	
@@ -617,51 +681,53 @@ srqdak:	lxi	b,systatb
 	sta	systatb
 	jmp	l0b10
 
-
-l0aed:	lda	04101h
+l0aed:	lda	r4101
 	cma
 	ani	007h
-	sta	04103h
-	lxi	h,041efh
+	sta	r4103
+	lxi	h,r41ef
 	ana	m
 	mov	m,a
-	lda	04103h
+	lda	r4103
 	add	a
 	add	a
 	add	a
 	add	a
-	lxi	h,04103h
+	lxi	h,r4103
 	ora	m
-	lxi	h,041f2h
+	lxi	h,dstatb
 	ana	m
 	mov	m,a	
-	lxi	h,041eeh
+	lxi	h,r41ee
 	mvi	m,000h
 l0b10:	ret
 
 
 ; cmd 005h - Clears IOC subsystem interrupt request
-srqack:	lxi	h,041efh
+srqack:	lxi	h,r41ef
 	mvi	m,000h
-	lxi	h,041f2h
+	lxi	h,dstatb
 	mvi	m,000h
-	lxi	h,041eeh
+	lxi	h,r41ee
 	mvi	m,000h
 	ret
 
 
 ; cmd 007h - Tests ability of IOC to echo data byte sent by master
-decho:	lxi	b,systatb
+decho:	lxi	b,systatb	; get data byte from master
 	call	mget1d
-	sta	04103h
-	lda	041edh
+	sta	r4103
+
+	lda	r41ed
 	cpi	027h
 	jnz	l0b37
 
-	lxi	h,04103h
+	lxi	h,r4103
 	mvi	m,0edh
-l0b37:	lda	04103h
+
+l0b37:	lda	r4103		; return data byte to master
 	out	dbbout
+
 	mvi	a,000h
 	out	clrcd
 	ret
@@ -675,7 +741,7 @@ csmem:	mvi	c,000h
 
 
 ; cmd 009h - Requests IOC to test on-board RAM. Returns pass/fail.
-tram:	lxi	d,04200h
+tram:	lxi	d,databf
 	mvi	c,001h
 	call	s000b
 	out	dbbout
@@ -690,18 +756,18 @@ tram:	lxi	d,04200h
 sint:	lxi	b,systatb
 	call	mget1d
 	ani	007h
-	sta	041f0h
+	sta	intena
 	ret
 
 
 ; cmd 010h - Requests data byte output to the CRT monitor.
-crtc:	lxi	b,041f3h
+crtc:	lxi	b,crtstb
 	call	mget1d
 	mov	c,a	
 	call	05ff5h
-	lda	041efh
+	lda	r41ef
 	ori	001h
-	sta	041efh
+	sta	r41ef
 	ret
 
 
@@ -711,20 +777,23 @@ crtc:	lxi	b,041f3h
 ; bit 5 - illegal data
 ; bits 4..1 - reserved
 ; bit 0 - CRT present
-crts:	lda	041edh
+crts:	lda	r41ed		; was completion interrupt requested
 	ani	080h
 	cpi	000h
 	jz	l0b85
 
-	lda	041f3h
-	ori	040h
-	sta	041f3h
-l0b85:	lda	041f3h
-	ori	001h
-	cma
+	lda	crtstb		; yes, illegal
+	ori	crtils
+	sta	crtstb
+
+l0b85:	lda	crtstb
+	ori	crtprs
+	cma			; (hw negative logic)
 	out	dbbout
-	lxi	h,041f3h
+
+	lxi	h,crtstb	; clear CRT status
 	mvi	m,000h
+
 	ret
 
 
@@ -740,10 +809,10 @@ wpbc:	lxi	h,iopbcnt
 ; cmd 017h - Enables input of diskette write bytes from master.
 ; The first byte transferred from the master is the number of 128-byte
 ; records to follow.
-wdbc:	lxi	b,041ffh
+wdbc:	lxi	b,dskstb	; address in which to set illegal data flag
 	call	mget1d
 	mov	c,a		; block count
-	lxi	d,04200h	; buffer address
+	lxi	d,databf	; buffer address
 	call	s092c		; transfer data blocks from master
 	call	s0a1a
 	ret
@@ -752,9 +821,9 @@ wdbc:	lxi	b,041ffh
 ; cmd 019h - Enables input of diskette read bytes to master.
 rdbc:	mvi	c,008h
 	call	s0834
-	lhld	041fah
+	lhld	iopb+iopbosc	; get sector count in L, track in H
 	mov	c,l	
-	lxi	d,04200h
+	lxi	d,databf
 	call	s095f
 	call	s0a1a
 	ret
@@ -769,43 +838,46 @@ rrsts:	call	xs0809
 
 ; cmd 01ch - Returns diskette device status byte to master.
 rdsts:	call	xs0806
-	lda	041f0h
+	lda	intena
 	ani	004h
 	cpi	000h
 	jz	l0be1
 	
-	lda	041efh
+	lda	r41ef
 	ori	004h
-	sta	041efh
-l0be1:	lda	041edh
+	sta	r41ef
+l0be1:	lda	r41ed
 	ani	080h
 	cpi	000h
 	jz	l0bf3
 
-	lda	041ffh
-	ori	040h
-	sta	041ffh
-l0bf3:	lda	041ffh
-	cma
+	lda	dskstb
+	ori	fdsils		; illegal status
+	sta	dskstb
+
+l0bf3:	lda	dskstb		; output disk status byte
+	cma			; (hw negative logic)
 	out	dbbout
-	lda	041ffh
-	ani	00bh
-	sta	041ffh
+
+	lda	dskstb
+	ani	fdsprs+fdsrdy+fdsrs0
+	sta	dskstb
+
 	ret	
 
 
 s0c02:	call	s1800
 	call	s1012
 	ei	
-	lda	041fdh
+	lda	r41fd
 	rar	
 	jnc	l0c4b
-	lda	041f0h
+	lda	intena
 	ani	004h
 	cpi	000h
 	jz	l0c4b
 
-	lda	041efh
+	lda	r41ef
 	ani	004h
 	cpi	000h
 	jnz	l0c4b
@@ -816,19 +888,20 @@ s0c02:	call	s1800
 	cpi	000h
 	jz	l0c4b
 
-	lda	041ffh
-	ani	004h
-	sta	041ffh
-	lxi	h,041fdh
+	lda	dskstb		; clear disk status byte except operation complete
+	ani	fdscmp
+	sta	dskstb
+
+	lxi	h,r41fd
 	mvi	m,000h
 	in	fdcrslt
-	sta	041f6h
+	sta	r41f6
 	inx	h
 	mvi	m,0ffh
-	lda	041efh
+	lda	r41ef
 	ori	004h
-	sta	041efh
-l0c4b:	lda	041eeh
+	sta	r41ef
+l0c4b:	lda	r41ee
 	rar	
 	jc	l0c7b
 
@@ -838,17 +911,17 @@ l0c4b:	lda	041eeh
 	jz	l0c5f
 
 	call	s1815
-l0c5f:	lda	041efh
+l0c5f:	lda	r41ef
 	ani	007h
 	cpi	000h
 	jz	l0c7b
 
-	lda	041efh
+	lda	r41ef
 	ani	002h
 	cpi	000h
 	jz	l0c78
 
-	lxi	h,041ech
+	lxi	h,r41ec
 	mvi	m,000h
 l0c78:	call	xs080f
 l0c7b:	in	kbdstat
@@ -884,11 +957,11 @@ l0cae:	mvi	a,000h
 
 
 ; cmd 001h - Resets device-generated error (not used by standard devices).
-ereset:	lxi	h,04080h
+ereset:	lxi	h,stack
 	sphl
 	call	s0c02
 	call	s181b
-l0cbd:	lxi	h,04080h
+l0cbd:	lxi	h,stack
 	sphl
 	call	s0c02
 	jmp	l0cbd
@@ -914,72 +987,72 @@ s0ce6:	call	s0880
 	ret	
 
 
-s0cec:	lxi	h,0410dh
+s0cec:	lxi	h,r410d
 	mov	m,c	
-	lxi	h,04200h
-	shld	0410bh
-	lda	041fah
+	lxi	h,databf
+	shld	r410b
+	lda	iopb+iopbosc	; sector count
 	cpi	001h
 	jnz	l0d07
 
 	call	s0d50
-	lxi	h,041fdh
+	lxi	h,r41fd
 	mvi	m,0ffh
-	ret	
+	ret
 
-l0d07:	lda	0410dh
+l0d07:	lda	r410d
 	ori	001h
-	sta	0410dh
-	lxi	h,0410eh
+	sta	r410d
+	lxi	h,r410e
 	mvi	m,001h
-l0d14:	lda	041fah
-	lxi	h,0410eh
+l0d14:	lda	iopb+iopbosc	; sector count
+	lxi	h,r410e
 	cmp	m
 	jc	l0d4f
 	
 	call	s0d50
 	call	s0ce6
-	sta	041f6h
-	lxi	h,041fch
+	sta	r41f6
+	lxi	h,iopb+iopbose
 	inr	m
 	lxi	d,00080h
-	lhld	0410bh
+	lhld	r410b
 	dad	d
-	shld	0410bh
-	lxi	h,041feh
+	shld	r410b
+	lxi	h,r41fe
 	mvi	m,0ffh
 	mvi	a,004h
 	inx	h
 	ora	m
 	mov	m,a
-	lda	041f6h
+	lda	r41f6
 	cpi	000h
 	jz	l0d48
 	ret	
 
-l0d48:	lxi	h,0410eh
+l0d48:	lxi	h,r410e
 	inr	m
 	jnz	l0d14
 
 l0d4f:	ret	
 
 
-s0d50:	lhld	0410bh
+s0d50:	lhld	r410b
 	mov	b,h	
 	mov	c,l	
 	mvi	e,07fh
 	call	s0848
-	lda	041fbh
-	sta	04104h
-	lda	041fch
-	sta	04105h
-	lxi	h,04106h
+	lda	iopb+iopbotk
+	sta	r4104
+	lda	iopb+iopbose
+	sta	r4105
+	lxi	h,r4106
 	mvi	m,001h
-	lhld	0410dh
+	lhld	r410d
 	mov	c,l	
 	call	s0887
 	mvi	e,003h
-	lxi	b,04104h
+	lxi	b,r4104
 	call	s08d3
 	ret
 
@@ -990,14 +1063,14 @@ s0d7b:	lda	iopb+iopbocw	; get channel word
 	call	s088e
 
 	mvi	e,067h
-	lxi	b,04200h
+	lxi	b,databf
 	call	s0848
 	mvi	c,063h
 	call	s0887
-	lxi	h,041fdh
+	lxi	h,r41fd
 	mvi	m,0ffh
 	mvi	e,001h
-	lxi	b,041fbh
+	lxi	b,iopb+iopbotk
 	call	s08d3
 	mvi	e,004h
 	lxi	b,d0cc8
@@ -1005,41 +1078,41 @@ s0d7b:	lda	iopb+iopbocw	; get channel word
 	ret
 
 
-s0da7:	lxi	h,0410fh
+s0da7:	lxi	h,r410f
 	mov	m,c
 	mvi	c,069h
 	call	s0887
-	lxi	h,041fdh
+	lxi	h,r41fd
 	mvi	m,0ffh
 	mvi	e,001h
-	lxi	b,0410fh
+	lxi	b,r410f
 	call	s08d3
 	ret
 
 
-s0dbe:	lxi	h,04110h
+s0dbe:	lxi	h,r4110
 	mov	m,c	
-	lda	04110h
+	lda	r4110
 	ori	040h
 	mov	c,a	
 	call	s0887
 	call	s0ce6
-	sta	0410ah
-	lda	0410ah
+	sta	r410a
+	lda	r410a
 	ani	004h
 	cpi	000h
 	jnz	l0de8
 
-	lhld	04110h
+	lhld	r4110
 	mov	c,l	
 	call	s0887
 	call	s0ce6
-	sta	04109h
+	sta	r4109
 l0de8:	ret	
 
 
 xs0803:	call	s083d
-	lxi	h,041f5h
+	lxi	h,r41f5
 	mvi	m,080h
 	lda	iopb+iopboin	; get diskette instruction byte
 	ani	007h
@@ -1055,73 +1128,85 @@ xs0803:	call	s083d
 	pchl
 
 
-l0e03:	lda	041ffh
-	ori	004h
-	sta	041ffh
+; FD no operation command
+fdnoop:	lda	dskstb		; set diskette status operation complete
+	ori	fdscmp
+	sta	dskstb
+
 	jmp	l0e69
 
-l0e0e:	lhld	041fbh
+; FD seek command
+fdseek:	lhld	iopb+iopbotk
 	mov	c,l	
 	call	s0da7
 	jmp	l0e69
 
-l0e18:	call	s082f
+; FD format track command
+fmfmt:	call	s082f
 	call	s0d7b
 	jmp	l0e69
 
-l0e21:	mvi	c,000h
+; FD recalibrate command
+fdrec:	mvi	c,000h
 	call	s0da7
 	jmp	l0e69
 
-l0e29:	lxi	h,041f5h
+; FD read data command
+fdread:	lxi	h,r41f5
 	mvi	m,040h
 	mvi	c,052h
 	call	s0cec
 	jmp	l0e69
 
-l0e36:	lxi	h,041f5h
+; FD verify CRC command
+fdver:	lxi	h,r41f5
 	mvi	m,000h
 	mvi	c,05eh
 	call	s0cec
 	jmp	l0e69
 
-l0e43:	call	s082f
+; FD write (normal data) command
+fdwrt:	call	s082f
 	mvi	c,04ah
 	call	s0cec
 	jmp	l0e69
 	
-l0e4e:	call	s082f
+; FD write deleted data command
+fdwrtd:	call	s082f
 	mvi	c,04eh
 	call	s0cec
 	jmp	l0e69
 
 
-d0e59:	dw	l0e03
-	dw	l0e0e
-	dw	l0e18
-	dw	l0e21
-	dw	l0e29
-	dw	l0e36
-	dw	l0e43
-	dw	l0e4e
+d0e59:	dw	fdnoop	; no operation
+	dw	fdseek	; seek
+	dw	fmfmt	; format track
+	dw	fdrec	; recalibrate
+	dw	fdread	; read data
+	dw	fdver	; verify CRC
+	dw	fdwrt	; write data
+	dw	fdwrtd	; write deleted data
 
 l0e69:	ret
 
 
 s0e6a:	mvi	c,02ch
 	call	s0dbe
-	lda	041ffh
+
+	lda	dskstb		; put disk status byte, less reserved bit 0, on stack
 	ani	0feh
 	push	psw
-	lda	0410ah
+
+	lda	r410a
 	ani	004h
-	ani	0feh
+	ani	0feh		; superfluous!
 	rar
 	rar
-	pop	b
+
+	pop	b		; get back disk status byte and or into acc
 	mov	c,b	
-	ora	c	
-	sta	041ffh
+	ora	c		; set flags
+	sta	dskstb
 	ret
 
 
@@ -1129,23 +1214,23 @@ xs0806:	in	miscin
 	ani	flppres
 	cpi	000h
 	jnz	l0e97
-	lda	041ffh
+	lda	dskstb
 	ani	0f7h
-	sta	041ffh
+	sta	dskstb
 	ret	
 
 
-l0e97:	lda	041ffh
+l0e97:	lda	dskstb
 	ori	008h
-	sta	041ffh
-	lda	041fdh
+	sta	dskstb
+	lda	r41fd
 	cpi	000h
 	jnz	l0eab
 
 	call	s0e6a
 	ret	
 
-l0eab:	lda	041ffh
+l0eab:	lda	dskstb
 	ani	0fbh
 	push	psw	
 	in	fdcstat
@@ -1157,29 +1242,29 @@ l0eab:	lda	041ffh
 	pop	b
 	mov	c,b	
 	ora	c	
-	sta	041ffh
-	lda	041ffh
+	sta	dskstb
+	lda	dskstb
 	ani	004h
 	cpi	000h
 	jz	l0edc
 
-	lxi	h,041fdh
+	lxi	h,r41fd
 	mvi	m,000h
 	call	s0ce6
-	sta	041f6h
-	lxi	h,041feh
+	sta	r41f6
+	lxi	h,r41fe
 	mvi	m,0ffh
 	call	s0e6a
 l0edc:	ret	
 
 
-xs0809:	lda	041feh
+xs0809:	lda	r41fe
 	rar	
 	jc	00ee9h
 
-	lxi	h,041f6h
+	lxi	h,r41f6
 	mvi	m,000h
-l0ee9:	lxi	h,041feh
+l0ee9:	lxi	h,r41fe
 	mvi	m,000h
 	dcx	h
 	mov	a,m
@@ -1187,28 +1272,28 @@ l0ee9:	lxi	h,041feh
 	jnc	l0efa
 
 	call	s0ce6
-	sta	041f6h
-l0efa:	lxi	h,041fdh
+	sta	r41f6
+l0efa:	lxi	h,r41fd
 	mvi	m,000h
-	lda	041f6h
+	lda	r41f6
 	cpi	000h
 	jnz	l0f0a
 
 	mvi	a,000h
 	ret	
 
-l0f0a:	lda	041f6h
+l0f0a:	lda	r41f6
 	ani	020h
 	cpi	000h
 	jz	l0f1c
 
-	lxi	h,04111h
+	lxi	h,r4111
 	mvi	m,001h
 	jmp	00f21h
 
-l0f1c:	lxi	h,04111h
+l0f1c:	lxi	h,r4111
 	mvi	m,000h
-l0f21:	lda	041f6h
+l0f21:	lda	r41f6
 	ani	01eh
 	ora	a	
 	rar
@@ -1216,7 +1301,7 @@ l0f21:	lda	041f6h
 	mvi	b,000h
 	lxi	h,d0ccc
 	dad	b
-	lda	04111h
+	lda	r4111
 	ora	m
 	ret
 
