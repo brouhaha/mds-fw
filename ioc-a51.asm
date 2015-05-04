@@ -242,35 +242,46 @@ s0887:	call	s0880
 	ret
 
 
-; build map of logical sector number (001h to 01ah) to physical sector number
+; build ID fields to format a track
 ; on entry, C is nonzero if sectseq bit was set in IOPB channel word
-s088e:	mvi	b,maxsect
+fbldid:	mvi	b,maxsect
 
-	lxi	h,04232h	; end of table of two-byte logical sect num
-	lxi	d,04266h	; end of table of four-byte phys sect info
+; Assuming sectseq bit was set, the sector numbers are provided as the
+; first byte of each of 26 two-byte mapping table entries transferred from
+; the master.
+; Move them into the third byte of each ID field entry.
+; Both the tables start at databf, and dest entries take more room than src,
+; so start from the end of the buffers and work toward the beginning.
+	lxi	h,databf+2*maxsect-2	; end of table of two-byte logical sect num
+	lxi	d,databf+4*maxsect-2	; end of table of four-byte phys sect info
 
 	push	b		; save pointers for use in second pass
 	push	d
 
-l0898:	mov	a,m
+l0898:	mov	a,m		; copy sector number
 	stax	d
+	
 	dcx	h
 	dcx	h
+
 	dcx	d
 	dcx	d
 	dcx	d
 	dcx	d
+
 	dcr	b
 	jnz	l0898
 
 	pop	h		; restore pointers for second pass
 	pop	b
 
-	mov	a,c		; was the sectseq bit set?
+	mov	a,c		; was special sector ordering requested
 	ana	a
-	jnz	l08b4		; no
+	jnz	l08b4		; yes
 
-; set up remap for format
+; Special sector ordering not requested, use sequential sector numbers
+; from 1 to 26. Since HL is pointing to the sector number field of the
+; last entry, work backwards, counting down to 1
 l08ab:	mov	m,b
 	dcx	h
 	dcx	h
@@ -279,17 +290,23 @@ l08ab:	mov	m,b
 	dcr	b
 	jnz	l08ab
 
+; Now fill in track, head, and sector size (first, second, and fourth bytes
+; of each entry).
 l08b4:	lxi	h,databf
 	mvi	b,maxsect
 	lda	iopb+iopbotk
 	mvi	c,000h
-l08be:	mov	m,a
+l08be:	mov	m,a	; track
 	inx	h
-	mov	m,c
+
+	mov	m,c	; head = 0
 	inx	h	
+
+	inx	h	; skip sector, already hav eit
+
+	mov	m,c	; sector size = 0
 	inx	h	
-	mov	m,c
-	inx	h	
+
 	dcr	b	
 	jnz	l08be
 	ret	
@@ -1060,7 +1077,7 @@ s0d50:	lhld	r410b
 s0d7b:	lda	iopb+iopbocw	; get channel word
 	ani	sectseq
 	mov	c,a	
-	call	s088e
+	call	fbldid		; build ID fields
 
 	mvi	e,067h
 	lxi	b,databf
