@@ -293,9 +293,10 @@ l08ab:	mov	m,b
 ; Now fill in track, head, and sector size (first, second, and fourth bytes
 ; of each entry).
 l08b4:	lxi	h,databf
-	mvi	b,maxsect
-	lda	iopb+iopbotk
-	mvi	c,000h
+	mvi	b,maxsect	; B = loop counter
+	lda	iopb+iopbotk	; A = IOPB track number
+	mvi	c,000h		; C = 0 (constant)
+
 l08be:	mov	m,a	; track
 	inx	h
 
