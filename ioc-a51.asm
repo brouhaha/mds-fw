@@ -592,7 +592,7 @@ wpbcc:	mvi	a,005h		; check if full IOPB already received
 	cpi	005h
 	jnz	l0a53
 
-	call	xs0803
+	call	xs0803		; issue FD command
 l0a53:	call	s0a1a
 l0a56:	ret
 
@@ -839,7 +839,7 @@ wdbc:	lxi	b,dskstb	; address in which to set illegal data flag
 ; cmd 019h - Enables input of diskette read bytes to master.
 rdbc:	mvi	c,008h
 	call	s0834
-	lhld	iopb+iopbosc	; get sector count in L, track in H
+	lhld	iopb+iopbosc	; get sector count in L
 	mov	c,l	
 	lxi	d,databf
 	call	s095f
@@ -1031,7 +1031,7 @@ l0d14:	lda	iopb+iopbosc	; sector count
 	call	s0d50
 	call	s0ce6
 	sta	r41f6
-	lxi	h,iopb+iopbose
+	lxi	h,iopb+iopbose	; sector number
 	inr	m
 	lxi	d,00080h
 	lhld	r410b
@@ -1060,9 +1060,9 @@ s0d50:	lhld	r410b
 	mov	c,l	
 	mvi	e,07fh
 	call	s0848
-	lda	iopb+iopbotk
+	lda	iopb+iopbotk	; track
 	sta	r4104
-	lda	iopb+iopbose
+	lda	iopb+iopbose	; sector
 	sta	r4105
 	lxi	h,r4106
 	mvi	m,001h
@@ -1129,20 +1129,22 @@ s0dbe:	lxi	h,r4110
 l0de8:	ret	
 
 
+; issue FD command
 xs0803:	call	s083d
 	lxi	h,r41f5
 	mvi	m,080h
+
 	lda	iopb+iopboin	; get diskette instruction byte
-	ani	007h
-	mov	c,a	
+	ani	007h		; mask command number
+	mov	c,a		; move command number into BC
 	mvi	b,000h
 	lxi	h,d0e59
+	dad	b		; add 2*command number 
 	dad	b
-	dad	b
-	mov	e,m
+	mov	e,m		; get handler addr into DE
 	inx	h
 	mov	d,m
-	xchg
+	xchg			; jump to handler
 	pchl
 
 
