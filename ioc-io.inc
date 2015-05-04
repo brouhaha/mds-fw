@@ -30,6 +30,12 @@ kbdstat	equ	092h	; read keyboard status
 dbbstat	equ	0a0h	; read DBB status (flags)
 dbbin	equ	0b0h	; read DBB input buffer, reset IBF flag
 
+; DBB status bits
+dbbcd	equ	008h	; command = 0 (host output to port C1), data = 1 (port C0)
+dbbf0	equ	004h	; F0 flag = 1 when IOC busy
+dbbibf	equ	002h	; input buffer full (host has written but IOC hasn't read)
+dbbobf	equ	001h	; output buffer full (IOC has written but host hasn't read)
+
 ; 8271 floppy disk controller
 fdcstat	equ	0c0h	; FDC status (in)
 fdccmd	equ	0c0h	; FDC command (out)
