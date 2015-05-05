@@ -68,8 +68,12 @@ dskstb:	ds	1	; diskette status byte
 
 databf:	ds	26*128	; 04200h through 04f00h
 
+crtrows	equ	25
+crtcols	equ	80
+crtsize	equ	crtrows*crtcols
+
 	org	05230h
-scrbeg:	ds	24*80	; start of screen buffer
+scrbeg:	ds	crtsize	; start of screen buffer
 scrend:			; ends at 05a00h (last byte used 059ffh)
 
 	org	05af4h
@@ -136,6 +140,7 @@ fdsprs	equ	008h	; drive present
 fdscmp	equ	004h	; operation complete
 fdsrdy	equ	002h	; drive ready
 fdsrs0	equ	001h	; reserved bit, unknown purpose
+
 
 	org	00800h
 

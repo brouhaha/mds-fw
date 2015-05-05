@@ -3,3 +3,9 @@ fillto	macro	dest,value
 	db	value
 	endm
 	endm
+
+dbh	macro	s
+	irpc	char,s
+	db	080h+'CHAR'
+	endm
+	endm
