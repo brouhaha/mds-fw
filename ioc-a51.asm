@@ -75,6 +75,10 @@ scrend:			; ends at 05a00h (last byte used 059ffh)
 	org	05af4h
 r5af4:	ds	1
 
+	org	05ff5h
+r5ff5:			; code, size unknown
+
+
 ; DBB command byte
 cdbbrqi	equ	080h	; host requests that IOC generate command completion interrupt
 
@@ -142,9 +146,10 @@ s0809:	jmp	xs0809
 s080c:	jmp	xs080c
 	jmp	xs080f		; XXX no external references?
 
-	dw	d099e
+d0812:	dw	d099e
 
 
+; Externally referenced
 ; get one byte of data from master, return in A
 ; BC = address in which to set illegal data transfer flag if command received
 mget1d:	out	iocbusy
@@ -535,7 +540,7 @@ s09e7:	in	kbdstat
 
 	in	kbddat
 	mov	c,a	
-	call	05ff5h
+	call	r5ff5
 	call	s1012
 l09f9:	ret
 
@@ -782,7 +787,7 @@ sint:	lxi	b,systatb
 crtc:	lxi	b,crtstb
 	call	mget1d
 	mov	c,a	
-	call	05ff5h
+	call	r5ff5
 	lda	r41ef
 	ori	001h
 	sta	r41ef

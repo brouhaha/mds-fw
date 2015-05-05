@@ -84,13 +84,13 @@ s000b:	mvi	b,016h
 	
 ; 001b - XXX unreferenced?
 	mvi	c,000h
-	jmp	l01ec
+s001d:	jmp	l01ec
 	
 ; XXX insert macro to check address = 0020h
 	jmp	rst4
 
 s0023:	mvi	c,000h
-	jmp	l01c6
+s0025:	jmp	l01c6
 
 ; XXX insert macro to check address = 0028h
 	jmp	rst5
@@ -638,7 +638,7 @@ xcrtin:	di
 	inr	e
 	lxi	h,098cch
 
-l02ff:	mvi	a,unused4
+l02ff:	mvi	a,unkout4
 	xra	c	
 	out	miscout
 
