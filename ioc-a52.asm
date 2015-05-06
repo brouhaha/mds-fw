@@ -134,7 +134,7 @@ r5ff7:				; code, unknown size
 	org	01000h
 
 s1000:	jmp	xs1000
-cmd0f:	jmp	xcmd0f
+cblkm:	jmp	xcblkm
 s1006:	jmp	xs1006
 s1009:	jmp	xs1009
 s100c:	jmp	xs100c
@@ -191,43 +191,57 @@ xs1006:	push	d
 	ret
 
 
-xcmd0f:	out	iocbusy
+; cmd 00fh: block move of data to CRT
+; bit 6 of command determines function of data bytes with MSB set:
+;     0:  output (n-80h) blanks
+;     1:  output an attribute character
+; bit 5 of command determines destination
+;     0:  coordinates
+;     1:  current cursor location
+; requires coordinates if bit 5 of command
+xcblkm:	out	iocbusy
+
 	mov	a,c	
 	ani	040h
 	push	psw
-	mov	a,c	
+
+	mov	a,c		; was bit 5 set?
 	ani	020h
 	lhld	r5f38
-	jnz	l1092
+	jnz	l1092		; no
 
+	call	mget1d		; yes, get coordinates
+	mov	b,a		; B = row
 	call	mget1d
-	mov	b,a
-	call	mget1d
-	mov	c,a
+	mov	c,a		; C = col
 	sub	a
 	call	s157c
 	lhld	r5f38
+
 l1092:	call	s1127
-l1095:	call	s10fe
+
+bmnext:	call	bmrdch
 l1098:	jz	l10d0
 	jc	l10d6
-	cpi	0ffh
-	jnz	l10ad
-	mvi	a,050h
+
+	cpi	0ffh		; is data byte 0ffh, indicating done?
+	jnz	l10ad		; no
+
+	mvi	a,050h		; done
 	sub	c
 	sta	r5f38
 	pop	psw
 	jmp	l1503
 
-l10ad:	cpi	0feh
-	jnz	l10c1
+l10ad:	cpi	0feh		; is data byte 0feh, escaping following byte?
+	jnz	l10c1		; no
 
-l10b2:	in	dbbstat
+l10b2:	in	dbbstat		; get next byte
 	ana	d
 	jnz	l10b2
 	in	dbbin
 	xra	b
-l10bb:	call	s10fa
+l10bb:	call	bmput
 	jmp	l1098
 
 l10c1:	mov	b,a
@@ -237,47 +251,53 @@ l10c1:	mov	b,a
 	mvi	b,0ffh
 	jnz	l10bb
 	call	s1146
-	jmp	l1095
+	jmp	bmnext
 
 l10d0:	call	s110d
-	jmp	l1095
+	jmp	bmnext
 
-l10d6:	cpi	00ah		; line feed
-	jnz	l10e4
+l10d6:	cpi	00ah		; is it a line feed?
+	jnz	l10e4		; no
+
 	mvi	a,050h
 	sub	c	
 	call	s111f
-	jmp	l1095
+	jmp	bmnext
 
-l10e4:	cpi	00dh		; carriage return
-	jnz	l10bb
+l10e4:	cpi	00dh		; is it a carriage return?
+	jnz	l10bb		; no
+
 	inr	b
 	dad	b
 	dcr	b
 	mvi	c,0b0h
 	dad	b
 	mvi	c,050h
-	jmp	l1095
+	jmp	bmnext
 
 
-l10f4:	in	dbbin
-	xra	b	
+; block move: jump here once we've read a byte from master, to set flags appropriately
+bmrgot:	in	dbbin
+	xra	b		; test whether special handling is necessary
 	rm	
 	cmp	e	
 	rc	
 
-s10fa:	mov	m,a	
+
+bmput:	mov	m,a
 	inx	h
 	dcr	c
 	rz
 
-s10fe:	in	dbbstat
+
+; block move: get a byte from master
+bmrdch:	in	dbbstat
 	ana	d	
-	jz	l10f4
+	jz	bmrgot
 	in	dbbstat
 	ana	d	
-	jz	l10f4
-	jmp	s10fe
+	jz	bmrgot
+	jmp	bmrdch
 
 
 s110d:	lhld	r5f38
