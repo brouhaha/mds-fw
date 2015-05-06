@@ -23,8 +23,8 @@ mget1d	equ	00814h
 
 ; entry points in ROM 3
 
-s1803	equ	01803h
-s1806	equ	01806h
+s1803	equ	01803h	; copy C bytes from (HL) to (DE)
+s1806	equ	01806h	; unpack sparse table
 s180f	equ	0180fh
 s1812	equ	01812h
 s1818	equ	01818h
@@ -393,10 +393,12 @@ xs1000:	lhld	d0812
 s11bc:	lxi	h,r5f34
 	lxi	d,r5f50
 	call	s0023
-	lxi	h,d1294
+
+	lxi	h,rcodi
 	lxi	d,rst5
-	mvi	c,04bh
+	mvi	c,rmclen
 	call	s1803
+
 	lxi	d,scrbeg
 	mvi	a,0f2h
 	stax	d
@@ -493,54 +495,62 @@ l1282:	stax	d
 d1289:	db	019h,0a0h,000h,000h,020h,014h,080h,023h
 	db	0ffh,000h,045h
 
-d1294:	jmp	l12df
 
-	mvi	a,006h		; mvi opcode
+; following code is copied to RAM
+rcodi:	jmp	l12df		; 05fb4h: rst5 handler
+
+	mvi	a,006h		; 05fb7h: rst6 handler  mvi opcode
 	sta	r5ff5
 
-	pop	psw
-	jmp	00000h
-	rst	5
+	pop	psw		; 05fbch
+	jmp	00000h		; 05fbdh
 
-	in	crtstat
-	mvi	a,00ch
-	out	dmawamr
+	rst	5		; 05fc0h rst7 handler
 
-	mvi	a,scrbeg&0ffh
-	out	dmac2a
-	mvi	a,scrbeg>>8
-	out	dmac2a
-	mvi	a,(crtsize-1)&0ffh
-	out	dmac2tc
-	mvi	a,080h + ((crtsize-1)>>8)
-	out	dmac2tc
+; The following code updates the CRT DMA parameters, DMAC channel 2
+; for the top part of the screen, and DMAC channel 3 for the bottom
+; part.  The code is run from RAM so that the parameter values can
+; be quickly loaded with immediate operands, which are changed
+; by ROM routines that handle display scrolling.
+	in	crtstat		; 05fc1h
+	mvi	a,00ch		; 05fc3h
+	out	dmawamr		; 05fc5h
 
-	mvi	a,scrbeg&0ffh
-	out	dmac3a
-	mvi	a,scrbeg>>8
-	out	dmac3a
-	mvi	a,(crtsize-1)&0ffh
-	out	dmac3tc
-	mvi	a,080h + ((crtsize-1)>>8)
-	out	dmac3tc
+	mvi	a,scrbeg&0ffh			; 05fc7h
+	out	dmac2a				; 05fc9h
+	mvi	a,scrbeg>>8			; 05fcbh
+	out	dmac2a				; 05fcdh
+	mvi	a,(crtsize-1)&0ffh		; 05fcfh
+	out	dmac2tc				; 05fc1h
+	mvi	a,080h + ((crtsize-1)>>8)	; 05fd3h
+	out	dmac2tc				; 05fd5h
 
-	mvi	a,00ah
-	out	dmawmod
-	mvi	a,00bh
-	out	dmawmod
-	sub	a
-	out	dmawamr
-	pop	psw
-	ei
-	ret
+	mvi	a,scrbeg&0ffh			; 05fd7h
+	out	dmac3a				; 05fd9h
+	mvi	a,scrbeg>>8			; 05fdbh
+	out	dmac3a				; 05fddh
+	mvi	a,(crtsize-1)&0ffh		; 05fdfh
+	out	dmac3tc				; 05fe1h
+	mvi	a,080h + ((crtsize-1)>>8)	; 05fe3h
+	out	dmac3tc				; 05fe5h
 
+	mvi	a,00ah				; 05fe7h
+	out	dmawmod				; 05fe9h
+	mvi	a,00bh				; 05febh
+	out	dmawmod				; 05fedh
+	sub	a				; 05fefh
+	out	dmawamr				; 05ff0h
+	pop	psw				; 05ff1h
+	ei					; 05ff2h
+	ret					; 05ff3h
 
-;12d5
-	mvi	b,05bh
-	ldax	b
-	ana	a
-	jz	l144c
-	jmp	l1432
+	mvi	b,05bh				; 05ff4h
+	ldax	b				; 05ff6h
+	ana	a				; 05ff7h
+	jz	l144c				; 05ff8h
+	jmp	l1432				; 05ffbh
+rmclen	equ	$-rcodi
+
 
 
 l12df:	inx	sp
@@ -1304,11 +1314,21 @@ d1771:	db	014h,012h,011h,013h,01ch,000h,000h,01bh
 	db	00bh,021h,01fh,01dh,010h,007h,022h,004h
 	db	017h,019h
 
-d178b:	db	014h,011h,01ch,012h,01dh,01bh,01eh,014h
-	db	01fh,013h,07fh,003h
+; init of sparse table
+d178b:	db	014h,011h
+	db	01ch,012h
+	db	01dh,01bh
+	db	01eh,014h
+	db	01fh,013h
+	db	07fh,003h	; rubout
 
-d1797:	db	007h,002h,008h,013h,00ah,012h,00dh,01ah
-	db	01bh,001h,000h,003h,020h,000h
+d1797:	db	007h,002h	; bell
+	db	008h,013h	; backspace
+	db	00ah,012h	; line feed
+	db	00dh,01ah	; carriage return
+	db	01bh,001h	; escape
+	db	000h,003h	; null
+	db	020h,000h	; space
 
 
 	db	"CORP INTEL corp.1981-83"

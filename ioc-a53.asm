@@ -76,8 +76,8 @@ r5ff5:			; code, size unknown
 	org	01800h
 
 s1800:	jmp	xs1800
-s1803:	jmp	xs1803
-s1806:	jmp	xs1806
+s1803:	jmp	xs1803	; copy C bytes from (HL) to (DE)
+s1806:	jmp	xs1806	; unpack sparse table
 keyc:	jmp	xkeyc	; cmd 012h - Requests data byte input from the keyboard.
 kstc:	jmp	xkstc	; cmd 013h - Returns keyboard status byte to master.
 s180f:	jmp	xs18d2
@@ -183,6 +183,14 @@ l18a5:	in	kbdstat
 	jmp	l18a0
 
 
+; Fill a sparse table in RAM from a dense table
+; On entry:
+;   DE points to dense table of two-byte entries
+;   H is high byte of addr of sparse table in RAM
+; Each dense table entry contains:
+;   first byte - low byte of addr of sparse table entry
+;   second byte - data to store in sparse table entry
+; Last dense table entry has a second byte of zero
 xs1806:	ldax	d
 	inx	d
 	mov	l,a
@@ -194,6 +202,7 @@ xs1806:	ldax	d
 	ret
 
 
+; copy C bytes from (HL) to (DE)
 xs1803:	mov	a,m
 	stax	d
 	inx	h
@@ -652,7 +661,9 @@ d1b4d:	db	000h,01eh,0ffh,03ah,046h,0fdh,03ah,0ffh
 
 
 d1b62:	dbh	"AEDIT"
-	db	020h,0ffh,0feh,0ffh
+	db	020h,0ffh
+
+	db	0feh,0ffh
 
 	dbh	"COPY"
 	db	020h,0ffh
