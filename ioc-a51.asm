@@ -11,7 +11,7 @@ romt2c	equ	0002bh
 
 ; entry points in ROM 2
 
-cmd0f	equ	01003h	; cmd 00f - not documented
+cblkm	equ	01003h	; cmd 00fh - block move data to CRT
 s1006	equ	01006h
 s1012	equ	01012h
 
@@ -339,7 +339,7 @@ s08d3:	in	fdcstat
 	ret
 
 
-; cmd 00e - unknown
+; cmd 00eh - unknown
 cmd0e:	mov	a,c	
 	cpi	04eh
 	lxi	b,00002h
@@ -380,7 +380,7 @@ cmd0e:	mov	a,c
 	jmp	s096a
 
 
-; cmd 00d - load memory from master
+; cmd 00dh - load memory from master
 ; Only allowed if RAM loc r5af4 contains 024h. But how can one set that?
 cmd0d:	lda	r5af4
 	cpi	024h
@@ -497,6 +497,24 @@ s098d:	call	mget1d
 	ret
 
 
+; IOC command dispatch table
+
+; The basic set of IOC commands is documented in Intel's "Intellec
+; Series II Microcomputer Development System Hardware Interface
+; Manual", order number 9800555-03, dated July 1983, in chapter 4 "IOC
+; I/O Interfaces".
+
+; One additional command, 00fh, CRT block transfer, is documented in
+; Intel's "Intellec Series II CRT and Keyboard Interface Manual",
+; order number 122029-001, dated August 1982.  This is applicable to
+; Series II MDS systems that have the IMDX 511 IOC Firmware Enhancement
+; Kit, installation of which is documented in Intel's "iMDX 511 IOC
+; Firmware Enhancement Kit Installation Instructions", order number
+; 122014-002, dated May 1983.
+
+; I have been unable to find any official documentation on commands
+; 00dh and 00eh.
+
 d099e:	dw	00000h		; 000h cpacify
 	dw	ereset		; 001h cereset
 	dw	systat		; 002h csystat
@@ -512,7 +530,7 @@ d099e:	dw	00000h		; 000h cpacify
 	dw	badcmd		; 00ch
 	dw	cmd0d		; 00dh ?
 	dw	cmd0e		; 00eh ?
-	dw	cmd0f		; 00fh ?
+	dw	cblkm		; 00fh cblkm
 	dw	crtc		; 010h ccrtc
 	dw	crts		; 011h ccrts
 	dw	keyc		; 012h ckeyc
