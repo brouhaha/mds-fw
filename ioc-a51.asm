@@ -79,6 +79,10 @@ scrend:			; ends at 05a00h (last byte used 059ffh)
 	org	05af4h
 r5af4:	ds	1
 
+	org	05f38h
+crscol:	ds	1	; cursor column
+crsrow:	ds	1	; cursor row
+
 	org	05ff5h
 r5ff5:			; code, size unknown
 
@@ -339,21 +343,23 @@ s08d3:	in	fdcstat
 	ret
 
 
-; cmd 00eh - unknown
-cmd0e:	mov	a,c	
-	cpi	04eh
-	lxi	b,00002h
+; cmd 00eh - block read console (CRT) contents
+; cmd 02eh - block read IOC memory
+; cmd 04eh - read current cursor position
+cblkr:	mov	a,c	
+	cpi	04eh		; read current cursor pos?
+	lxi	b,00002h	; yes, fixed parameters
 	lxi	h,05f38h
 	jz	s096a
 
 	push	psw
-	call	s098d
+	call	s098d		; get address and byte count from master
 	pop	psw
-	cpi	02eh
-	jz	s096a
+	cpi	02eh		; arbitrary memory
+	jz	s096a		; yes, go do it
 
-	mov	a,l
-	mov	l,h
+	mov	a,l		; convert first param (screen coord) to
+	mov	l,h		; screen buffer address
 	mov	h,a
 	call	s1006
 	mov	d,h	
@@ -381,8 +387,9 @@ cmd0e:	mov	a,c
 
 
 ; cmd 00dh - load memory from master
-; Only allowed if RAM loc r5af4 contains 024h. But how can one set that?
-cmd0d:	lda	r5af4
+; Only allowed if RAM loc r5af4 contains 024h, which can be set by
+; sending the console a sequnce ESC X 074h 024h
+wrram:	lda	r5af4
 	cpi	024h
 	jnz	badcmd
 
@@ -512,8 +519,10 @@ s098d:	call	mget1d
 ; Firmware Enhancement Kit Installation Instructions", order number
 ; 122014-002, dated May 1983.
 
-; I have been unable to find any official documentation on commands
-; 00dh and 00eh.
+; The 00dh and 00eh commands were not publicly documented. They are
+; described in "Enhanced IOC Firmware External Product Specification"
+; Version 1.4, dated August 10, 1982, along with various other features
+; that were apparently kept undocumented due to lack of testing resources.
 
 d099e:	dw	00000h		; 000h cpacify
 	dw	ereset		; 001h cereset
@@ -522,14 +531,14 @@ d099e:	dw	00000h		; 000h cpacify
 	dw	srqdak		; 004h csrqdak
 	dw	srqack		; 005h csrqack
 	dw	srq		; 006h csrq
-	dw	decho		; 007h cdecho
+	dw	decho		; 007h cdecho, 027h get IOC firmware version
 	dw	csmem		; 008h ccsmem
 	dw	tram		; 009h ctram
 	dw	sint		; 00ah csint
 	dw	badcmd		; 00bh
 	dw	badcmd		; 00ch
-	dw	cmd0d		; 00dh ?
-	dw	cmd0e		; 00eh ?
+	dw	wrram		; 00dh write IOC RAM
+	dw	cblkr		; 00eh block read CRT, 02eh read IOC RAM
 	dw	cblkm		; 00fh cblkm
 	dw	crtc		; 010h ccrtc
 	dw	crts		; 011h ccrts
@@ -760,6 +769,7 @@ srqack:	lxi	h,r41ef
 
 
 ; cmd 007h - Tests ability of IOC to echo data byte sent by master
+; cmd 027h - Get IOC firmware version
 decho:	lxi	b,systatb	; get data byte from master
 	call	mget1d
 	sta	r4103
@@ -769,9 +779,9 @@ decho:	lxi	b,systatb	; get data byte from master
 	jnz	l0b37
 
 	lxi	h,r4103
-	mvi	m,0edh
+	mvi	m,0ffh-012h	; version number 1.2
 
-l0b37:	lda	r4103		; return data byte to master
+l0b37:	lda	r4103		; return data byte (inverted) to master
 	out	dbbout
 
 	mvi	a,000h
