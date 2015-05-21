@@ -4,6 +4,9 @@
 	include	ioc-flp.inc
 	include ioc-mac.inc
 
+	include ioc-ram.inc
+
+
 ; entry points in ROM 0
 
 s0005	equ	00005h
@@ -28,107 +31,6 @@ s1806	equ	01806h	; unpack sparse table
 s180f	equ	0180fh
 s1812	equ	01812h
 s1818	equ	01818h
-
-
-; RAM, 4000h..5fffh
-
-rambase	equ	04000h
-
-	org	rambase
-cursor	ds	2	; pointer into screen buffer for cursor loc
-
-	org	041eah
-d41ea:	ds	2
-d41ec:	ds	1	; not sure of size
-	ds	7
-d41f4:	ds	1
-	ds	2
-moshad	ds	1	; RAM shadow of miscout register
-
-	org	04200h
-databf:	ds	26*128	; 04200h through 04f00h
-
-crtrows	equ	25
-crtcols	equ	80
-crtsize	equ	crtrows*crtcols
-
-	org	05230h
-scrbeg:	ds	crtsize	; start of screen buffer
-scrend:			; ends at 05a00h (last byte used 059ffh)
-
-	org	05a7eh
-r5a7e:	ds	2
-r5a80:	ds	2
-r5a82:	ds	2
-
-	org	05af0h
-r5af0:	ds	1
-r5af1:	ds	1
-r5af2:	ds	1
-	ds	2
-crsrfmt	ds	1
-	ds	1
-r5af7:	ds	1
-r5af8:	ds	1
-
-r5b00	equ	05b00h
-
-r5b20	equ	05b20h
-
-r5b80	equ	05b80h
-
-r5c00	equ	05c00h
-
-r5c41	equ	05c41h
-
-r5c61	equ	05c61h
-
-r5c80	equ	05c80h
-
-	org	05f00h
-r5f00	ds	52
-
-	org	05f34h
-r5f34:	ds	1
-	ds	1
-r5f36:	ds	2
-r5f38:	ds	1
-r5f39:	ds	1
-r5f3a:	ds	2
-r5f3c:	ds	2
-r5f3e:	ds	1
-r5f3f:	ds	1
-r5f40:	ds	1
-r5f41:	ds	1
-r5f42:	ds	1
-r5f43:	ds	1
-	ds	1
-r5f45:	ds	2
-r5f47:	ds	2
-r5f49:	ds	2
-r5f4b:	ds	2
-	ds	3
-r5f50:	ds	1
-
-rst5	equ	05fb4h
-
-r5fbe	equ	05fbeh
-rst7	equ	05fc0h
-r5fc1	equ	05fc1h
-r5fc4	equ	05fc4h
-r5fc6	equ	05fc6h
-r5fc8	equ	05fc8h
-r5fcc	equ	05fcch
-r5fd0	equ	05fd0h
-r5fd4	equ	05fd4h
-r5fe0	equ	05fe0h
-r5fe4	equ	05fe4h
-r5fec	equ	05fech
-r5fee	equ	05feeh
-
-	org	05ff5h
-r5ff5:	ds	2		; code
-r5ff7:				; code, unknown size
 
 
 	org	01000h
@@ -173,7 +75,7 @@ l1023:	push	psw
 	call	copy4c
 
 	sub	a	
-	sta	r5f3e
+	sta	nrolls
 	lhld	r5f49
 	call	xs1015
 	pop	b	
@@ -181,7 +83,7 @@ l1023:	push	psw
 
 
 xs1006:	push	d
-	lda	r5f3e
+	lda	nrolls
 	add	h
 	xchg
 	call	s171d
@@ -317,7 +219,7 @@ s111f:	lhld	r5f38
 
 s1127:	shld	r5f38
 	mov	e,l	
-	lda	r5f3e
+	lda	nrolls
 	add	h
 	call	s171d
 	mvi	d,000h
@@ -653,7 +555,7 @@ l135a:	push	h
 l136a:	call	s1406
 	jmp	l13e0
 
-s1370:	lda	r5f3e
+s1370:	lda	nrolls
 	dcr	a
 	jp	l1379
 
@@ -704,7 +606,7 @@ s13b2:	mov	a,b
 	ret
 
 
-s13bf:	lda	r5f3e
+s13bf:	lda	nrolls
 	inr	a
 	call	s1714
 	call	s170b
@@ -749,14 +651,14 @@ l13f5:	cnz	s13b2
 	ret
 
 
-s1406:	lda	r5f3e
+s1406:	lda	nrolls
 	add	c
 	mov	c,a
 	sui	019h
 	jc	l1411
 
 	mov	c,a	
-l1411:	lda	r5f3e
+l1411:	lda	nrolls
 	add	b
 	mov	b,a
 	sui	019h
@@ -794,7 +696,7 @@ l1432:	add	a
 	lxi	h,d172b-2
 	jnc	l143c
 
-	lhld	r5a7e
+	lhld	altcop		; alternate console output case table pointer
 l143c:	mov	e,a
 	mvi	d,000h
 	dad	d
@@ -833,10 +735,12 @@ l146b:	call	xs1018
 	jmp	r5ff7
 
 
+; console output case: bell
 l1473:	out	strtbel
 	ret	
 
 
+; console output case: set user flag (ESC X function)
 l1476:	call	xs101b
 	mov	a,b
 	ori	080h
@@ -876,7 +780,7 @@ l14ac:	lda	r5af8
 	jmp	l144c
 
 
-l14b3:	mvi	c,020h
+l14b3:	mvi	c,' '
 	jmp	l144c
 
 
@@ -952,7 +856,7 @@ l1515:	call	s155c
 
 xs1015:	shld	r5f38
 	mov	c,l
-	lda	r5f3e
+	lda	nrolls
 	add	h
 	call	s171d
 	shld	r5f3a
@@ -1293,7 +1197,7 @@ l16fc:	call	s1818
 	ret
 
 
-s170b:	sta	r5f3e
+s170b:	sta	nrolls
 l170e:	mvi	a,0efh
 	sta	rst7
 	ret
@@ -1305,7 +1209,7 @@ s1714:	cpi	019h
 	ret	
 
 
-s171a:	lda	r5f3e
+s171a:	lda	nrolls
 s171d:	call	s1714
 	push	psw
 	add	a
@@ -1319,15 +1223,42 @@ s171d:	call	s1714
 	ret
 
 
-d172b:	dw	l146b,l1473,l1503,l1476
-	dw	l14ac,l14b3,l14b8,l14c3
-	dw	l1448,l14c9,l14d3,l14d8
-	dw	l14e0,l14e9,l14f0,l14f6
-	dw	l1509,l1515,s1531,l153a
-	dw	l1545,l1551,l1569,l1599
-	dw	l15cb,l1631,l15d4,s15d1
-	dw	s0005,l15e2,l15ff,l1605
-	dw	l160b,l161e,l1659
+; dispatch for console output case numbers, starting with one
+d172b:	dw	l146b	; escape
+	dw	l1473	; ring bell
+	dw	l1503	; do nothing
+	dw	l1476	; set user flag (ESC X function)
+	dw	l14ac
+	dw	l14b3
+	dw	l14b8
+	dw	l14c3
+	dw	l1448
+	dw	l14c9
+	dw	l14d3
+	dw	l14d8
+	dw	l14e0
+	dw	l14e9
+	dw	l14f0
+	dw	l14f6
+	dw	l1509
+	dw	l1515
+	dw	s1531
+	dw	l153a
+	dw	l1545
+	dw	l1551
+	dw	l1569
+	dw	l1599
+	dw	l15cb
+	dw	l1631
+	dw	l15d4
+	dw	s15d1
+	dw	s0005
+	dw	l15e2
+	dw	l15ff
+	dw	l1605
+	dw	l160b
+	dw	l161e
+	dw	l1659
 
 d1771:	db	014h,012h,011h,013h,01ch,000h,000h,01bh
 	db	023h,01eh,020h,00ah,018h,00ch,00eh,00dh
@@ -1335,20 +1266,20 @@ d1771:	db	014h,012h,011h,013h,01ch,000h,000h,01bh
 	db	017h,019h
 
 ; init of sparse table
-d178b:	db	014h,011h
-	db	01ch,012h
-	db	01dh,01bh
-	db	01eh,014h
-	db	01fh,013h
-	db	07fh,003h	; rubout
+d178b:	db	014h,cccurr	; cursor right roll
+	db	01ch,cccudr	; cursor down roll
+	db	01dh,cchome	; home cursor within partition
+	db	01eh,cccuuw	; cursor up wrap
+	db	01fh,ccculw	; cursor left wrap
+	db	07fh,ccnop	; rubout - ignore
 
-d1797:	db	007h,002h	; bell
-	db	008h,013h	; backspace
-	db	00ah,012h	; line feed
-	db	00dh,01ah	; carriage return
-	db	01bh,001h	; escape
-	db	000h,003h	; null
-	db	020h,000h	; space
+d1797:	db	007h,ccbell	; bell
+	db	008h,ccculw	; backspace - cursor left wrap
+	db	00ah,cccudr	; line feed - cursor down roll
+	db	00dh,ccret	; carriage return
+	db	01bh,ccesc	; escape
+	db	000h,ccnop	; null
+	db	020h,ccdisp	; space
 
 
 	db	"CORP INTEL corp.1981-83"
