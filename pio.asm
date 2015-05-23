@@ -85,7 +85,7 @@ X005c:	mov	r5,#0
 
 X0061:	mov	r4,a
 	orl	p2,#7fh
-X0064:	call	X03d2
+	call	X03d2
 	mov	r3,a
 	inc	r7
 	inc	r6
@@ -558,7 +558,7 @@ X02c4:	mov	r0,#22h
 	jmp	X0337
 
 X02cc:	mov	r5,#1
-x02ce:	jmp	X0059
+	jmp	X0059
 
 X02d0:	mov	r5,#0
 	mov	r1,#23h
@@ -641,23 +641,23 @@ X0339:	mov	r1,a
 X0348:	mov	r5,#3
 	jmp	X0059
 
-	mov	r5,#4
+X034c:	mov	r5,#4
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
 
-	mov	r5,#5
+X0354:	mov	r5,#5
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f2h
 	jmp	X0053
 
-	mov	r5,#0
+X035c:	mov	r5,#0
 	mov	r1,#25h
 	call	X03c9
 	jt1	X0302
-X0364:	orl	p2,#10h
+	orl	p2,#10h
 	orl	p2,#7fh
 	mov	a,#8
 	call	X00ec
@@ -669,7 +669,7 @@ X0364:	orl	p2,#10h
 X0372:	mov	r5,#6
 	jmp	X0059
 
-	mov	r5,#7
+X0376:	mov	r5,#7
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
@@ -742,33 +742,31 @@ X03de:	mov	a,r5
 	add	a,#X03e2 & 0ffh
 	jmpp	@a
 
-X03e2:	db	0f5h
-	db	0edh
-	db	008h
-	db	04ch
-	db	054h
-	db	05ch
-	db	076h
-	db	07eh
-	db	0efh
-	db	0f1h
-	db	0f3h
-	db	044h
-	db	0d0h
-	db	024h
-	db	0beh
-	db	024h
-	db	0f3h
-	db	044h
-	db	05ch
-	db	0b8h
-	db	020h
-	db	023h
-	db	020h
-	db	040h
-	db	0a0h
-	db	004h
-	db	05ch
+X03e2:	db	X03f5 & 0ffh
+	db	X03ed & 0ffh
+	db	X0308 & 0ffh
+	db	X034c & 0ffh
+	db	X0354 & 0ffh
+	db	X035c & 0ffh
+	db	X0376 & 0ffh
+	db	X037e & 0ffh
+	db	X03ef & 0ffh
+	db	X03f1 & 0ffh
+	db	X03f3 & 0ffh
+
+X03ed:	jmp	X02d0
+
+X03ef:	jmp	X01be
+
+X03f1:	jmp	X01f3
+
+X03f3:	jmp	X025c
+
+X03f5:	mov	r0,#020h
+	mov	a,#020h
+	orl	a,@r0
+	mov	@r0,a
+	jmp	X005c
 
 X03fd:	movp	a,@a
 	ret
