@@ -17,7 +17,7 @@ fillto	macro	dest,value
 	fillto	0003h,000h
 	jmp	ibfirq
 
-	db	003h,023h	; probably the checksum
+	db	003h,023h
 
 	fillto	0007h,000h
 	jmp	tmrirq
@@ -368,12 +368,13 @@ X01b2:	clr	a
 	out	dbb,a
 	jmp	X005c
 
-; cmd 004h - device interrupt acknowledge
+
+; command 004h - device interrupt acknowledge
 srqdak:	mov	r5,#8
 	jmp	X0059
 
-; received srqdak byte
-X01be:	mov	a,r7
+; data byte received for srqdak command
+dsrqda:	mov	a,r7
 	cpl	a
 	anl	a,#0fh
 	mov	r7,a
@@ -397,6 +398,8 @@ X01be:	mov	a,r7
 X01d9:	anl	p2,#7fh
 	jmp	X005c
 
+
+; command 005h
 srqack:	clr	a
 	mov	r0,#26h
 	mov	@r0,a
@@ -428,7 +431,7 @@ getrp1:	movp	a,@a
 
 	fillto	0200h,000h
 
-; cmd 008h
+; command 008h
 csmem:	clr	c
 	clr	a
 	mov	r3,a
@@ -470,7 +473,7 @@ X0227:	mov	a,#0ffh		; ROM checksum bad, return 0ffh
 	jmp	X0059
 
 
-; cmd 009h
+; command 009h
 tram:	sel	rb0
 	mov	r0,#3fh
 	mov	a,#55h
@@ -502,7 +505,7 @@ X0252:	mov	a,#0ffh		; RAM bad, return 0ffh
 	jmp	reset
 
 
-; cmd 00ah
+; command 00ah
 sint:	mov	r5,#0ah
 	jmp	X0059
 
@@ -568,7 +571,7 @@ xrpstc:	jmp	rpstc
 xrdpdc:	jmp	rdpdc
 
 
-; cmd 010h
+; command 010h
 rdrc:	mov	r5,#0
 	mov	r1,#22h
 	mov	r4,#4
@@ -610,20 +613,19 @@ X02be:	mov	a,#80h
 	jmp	X005c
 
 
-; cmd 011h
+; command 011h
 rstc:	mov	r0,#22h
 	call	X03d2
 	anl	a,#4
 	jmp	X0337
 
 
-; cmd 012h
+; command 012h
 punc:	mov	r5,#1
 	jmp	X0059
 
-
-
-X02d0:	mov	r5,#0
+; data byte received for punc command
+dpunc:	mov	r5,#0
 	mov	r1,#23h
 	mov	r4,#1
 	mov	r3,#0eh
@@ -642,7 +644,7 @@ X02d0:	mov	r5,#0
 X02ea:	jmp	X005c
 
 
-; cmd 003h
+; command 003h
 pstc:	mov	r0,#23h
 	call	X03d2
 	anl	a,#1
@@ -656,13 +658,12 @@ X0300:	jmp	X005c
 X0302:	jmp	X02be
 
 
-; cmd 014h
+; command 014h
 lptc:	mov	r5,#2
 	jmp	X0059
 
-
-; command 002h
-X0308:	mov	r5,#0
+; data byte received fro lptc command
+dlptc:	mov	r5,#0
 	mov	r1,#24h
 	mov	r4,#10h
 	mov	r3,#0afh
@@ -715,21 +716,22 @@ X0339:	mov	r1,a
 wppc:	mov	r5,#3
 	jmp	X0059
 
-
-X034c:	mov	r5,#4
+; first data byte received for wppc comand
+d1wppc:	mov	r5,#4
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
 
-
-X0354:	mov	r5,#5
+; second data byte received for wppc command
+d2wppc:	mov	r5,#5
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f2h
 	jmp	X0053
 
-X035c:	mov	r5,#0
+; third data byte received for wppc command
+d3wppc:	mov	r5,#0
 	mov	r1,#25h
 	call	X03c9
 	jt1	X0302
@@ -747,15 +749,15 @@ X035c:	mov	r5,#0
 rppc:	mov	r5,#6
 	jmp	X0059
 
-
-X0376:	mov	r5,#7
+; first data byte received for rppc command
+d1rppc:	mov	r5,#7
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
 
-
-X037e:	mov	r5,#0
+; second data byte received for rppc command
+d2rppc:	mov	r5,#0
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f2h
@@ -830,27 +832,30 @@ X03de:	mov	a,r5
 	add	a,#X03e2 & 0ffh
 	jmpp	@a
 
-X03e2:	db	X03f5 & 0ffh	; rdrc
-	db	X03ed & 0ffh	; punc
-	db	X0308 & 0ffh	; lptc
-	db	X034c & 0ffh	; wppc byte 1
-	db	X0354 & 0ffh	; wppc byte 2
-	db	X035c & 0ffh	; wppc byte 3
-	db	X0376 & 0ffh	; rppc byte 1
-	db	X037e & 0ffh	; rppc byte 2
-	db	X03ef & 0ffh	; srqdak
+X03e2:	db	drdrc & 0ffh	; rdrc
+	db	xdpunc & 0ffh	; punc
+	db	dlptc & 0ffh	; lptc
+	db	d1wppc & 0ffh	; wppc byte 1
+	db	d2wppc & 0ffh	; wppc byte 2
+	db	d3wppc & 0ffh	; wppc byte 3
+	db	d1rppc & 0ffh	; rppc byte 1
+	db	d2rppc & 0ffh	; rppc byte 2
+	db	xdsrqd & 0ffh	; srqdak
 	db	xddech & 0ffh	; decho
 	db	xdsint & 0ffh	; sint
 
-X03ed:	jmp	X02d0
 
-X03ef:	jmp	X01be
+xdpunc:	jmp	dpunc
+
+xdsrqd:	jmp	dsrqda
 
 xddech:	jmp	ddecho
 
 xdsint:	jmp	dsint
 
-x03f5:	mov	r0,#020h
+
+; data byte received for rdrc command
+drdrc:	mov	r0,#020h
 	mov	a,#020h
 	orl	a,@r0
 	mov	@r0,a
