@@ -1,7 +1,49 @@
 ; Intel Intellec Series II/III MDS IOC parallel I/O controller (PIO) 8041A
 
+; assembles with asl (Macro Assembler AS)
+;   http://john.ccac.rwth-aachen.de:8000/as/
+
+; Port assignments
+
+;   TEST1 - PPACK, J7-2 to UPP
+;   PORT1 - P10-P17
+;   PORT2 - P20-P23 to 74154 decoder
+;           P24 to 74154 enable (active low)
+;           P25 to PTRDR ENABLE (active low)
+;           P26 to UPP IN ENABLE (active low)
+;           P27 to parallel int J14-31
+;
+;   74145 outputs
+;      UPP
+;      0 - PPWC/D/  J7-25
+;      1 - PPWC2/   J7-23
+;      2 - PPWC1/   J7-24
+;      3 - PPRC0/   J7-4
+;      4 - PPRC1/   J7-3
+;      5 - INIT/    J7-14
+;
+;      paper tape punch
+;      6 - PUNCH COMMAND/    J4-11
+;
+;      7 - DR/               J5-16
+;      8 - DL/               J5-17
+;
+;      printer
+;      9 - LPT DATA STROBE/  J6-14
+;     10 - LPT CTL 1/        J6-19
+;     11 - LPT CTL 2/        J6-20
+;
+;     12 - STATUS ENABLE/
+
+
+
 ; RAM usage
-; 028h - interrupt mask, set with sint command from host
+
+; 028h - interrupt enables, set with sint command from host
+;        bit 0 - 001h - paper tape punch interrupt enable
+;        bit 1 - 002h - line printer interrupt enable
+;        bit 2 - 004h - paper tape reader interrupt enable
+;        bit 3 - 008h - undocumented
 
 	cpu	8041
 
@@ -22,7 +64,8 @@ fillto	macro	dest,value
 	fillto	0007h,000h
 	jmp	tmrirq
 
-X0009:	orl	p1,#0ffh
+
+main:	orl	p1,#0ffh
 	anl	p2,#0fch
 	anl	p2,#0efh
 	in	a,p1
@@ -38,6 +81,7 @@ X0009:	orl	p1,#0ffh
 	anl	a,#0fh
 	mov	r2,a
 	dis	i
+
 	mov	r1,#26h
 	mov	a,@r1
 	anl	a,r2
@@ -45,8 +89,9 @@ X0009:	orl	p1,#0ffh
 	mov	r1,#21h
 	orl	a,@r1
 	mov	@r1,a
-	orl	p2,#80h
-X002d:	jmp	X0009
+	orl	p2,#80h		; set interrupt to master
+
+X002d:	jmp	main
 
 
 ibfirq:	clr	f0
@@ -79,7 +124,7 @@ X0041:	xch	a,r5
 
 X0051:	jmp	cmd0x
 
-X0053:	anl	p2,#0efh
+X0053:	anl	p2,#0efh	; pulse 74154 enable
 X0055:	orl	p2,#10h
 	orl	p2,#7fh
 X0059:	clr	f0
@@ -279,6 +324,7 @@ xsint:	jmp	sint
 
 badc0x:	jmp	badc1x
 
+
 reset:	dis	i
 	stop	tcnt
 	dis	tcnti
@@ -287,7 +333,8 @@ reset:	dis	i
 	outl	p2,a
 	anl	p2,#0f5h
 	anl	p2,#0efh
-	mov	a,#0ffh
+
+	mov	a,#0ffh		; start timer and verify that it works
 	mov	t,a
 	strt	t
 X0152:	jtf	X0156
@@ -296,17 +343,20 @@ X0152:	jtf	X0156
 X0156:	orl	p2,#10h
 	orl	p2,#0ah
 	sel	rb0
-	mov	r0,#3fh
+
+	mov	r0,#3fh		; clear RAM
 	clr	a
 X015e:	mov	@r0,a
 	djnz	r0,X015e
+
 	mov	a,#0
 	mov	psw,a
 	clr	f0
 	clr	f1
 	call	X016b
 	en	tcnti
-	jmp	X0009
+	jmp	main
+
 
 X016b:	retr
 
@@ -399,7 +449,7 @@ X01d9:	anl	p2,#7fh
 	jmp	X005c
 
 
-; command 005h
+; command 005h - reset all device interrupt bits, and interrupt signal to master
 srqack:	clr	a
 	mov	r0,#26h
 	mov	@r0,a
@@ -407,10 +457,12 @@ srqack:	clr	a
 	mov	a,#0f0h
 	anl	a,@r0
 	mov	@r0,a
-	anl	p2,#7fh
+	anl	p2,#7fh		; disable interrupt to master
 	jmp	X005c
 
-srq:	orl	p2,#80h
+
+; command 006h - generate hardware interrupt
+srq:	orl	p2,#80h		; enable interrupt to master
 	jmp	X005c
 
 
@@ -513,8 +565,8 @@ sint:	mov	r5,#0ah
 ; data byte received for sint command
 dsint:	mov	r0,#28h
 	mov	a,r7
-	anl	a,#0fh
-	mov	@r0,a
+	anl	a,#0fh		; note low *four* bits preserved
+	mov	@r0,a		;   function of bit 3 undocumented
 	jmp	X005c
 
 
@@ -572,6 +624,9 @@ xrdpdc:	jmp	rdpdc
 
 
 ; command 010h
+; read data byte if bits 6 of command is zero
+; move tape forward one frame if bit 6 is zero and bit 5 is zero
+; move tape backward one frame if bit 6 is one and bit 5 is one
 rdrc:	mov	r5,#0
 	mov	r1,#22h
 	mov	r4,#4
