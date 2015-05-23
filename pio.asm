@@ -1,4 +1,4 @@
-; IOC parallel I/O controller (PIO) 8041A
+; Intel Intellec Series II/III MDS IOC parallel I/O controller (PIO) 8041A
 
 	cpu	8041
 
@@ -9,13 +9,15 @@ fillto	macro	dest,value
 	endm
 
 	org	0
-	jmp	X0142
+	jmp	reset
 
 	fillto	0003h,000h
-	jmp	X002f
+	jmp	ibfirq
 
 	add	a,#23h
-	jmp	X0061
+
+	fillto	0007h,000h
+	jmp	tmrirq
 
 X0009:	orl	p1,#0ffh
 	anl	p2,#0fch
@@ -43,7 +45,7 @@ X0009:	orl	p1,#0ffh
 	orl	p2,#80h
 X002d:	jmp	X0009
 
-X002f:	clr	f0
+ibfirq:	clr	f0
 	cpl	f0
 	sel	rb1
 	mov	r2,a
@@ -67,9 +69,9 @@ X0041:	xch	a,r5
 	mov	r6,a
 	add	a,#0f0h
 	jnc	X0051
-	jmp	X026c
+	jmp	cmd1x
 
-X0051:	jmp	X0126
+X0051:	jmp	cmd0x
 
 X0053:	anl	p2,#0efh
 X0055:	orl	p2,#10h
@@ -83,7 +85,7 @@ X005c:	mov	r5,#0
 	mov	a,r2
 	retr
 
-X0061:	mov	r4,a
+tmrirq:	mov	r4,a
 	orl	p2,#7fh
 	call	X03d2
 	mov	r3,a
@@ -236,33 +238,39 @@ X0110:	mov	a,#20h
 
 	jmp	X005c
 
-X0126:	mov	a,r6
-	add	a,#2ah
+; handle commands 000h through 00fh
+cmd0x:	mov	a,r6
+	add	a,#ctbl0x & 0ffh
 	jmpp	@a
 
-	mov	a,t
-	add	a,r4
-	add	a,r6
-	orl	p1,#0bah
-	xrl	a,r5
-	djnz	r3,X01ef
-	outl	p2,a
-	movd	p4,a
-	movd	p6,a
-	orl	a,@r0
-	orl	a,@r0
-	orl	a,@r0
-	orl	a,@r0
-	orl	a,@r0
-	jmp	X0200
+ctbl0x:	db	reset & 0ffh	; pacify - reset PIO and its devices
+	db	ereset & 0ffh	; ereset - reset device-generated error
+	db	systat & 0ffh	; systat - get subsystem status byte
+	db	dstat & 0ffh	; dstat - get device status byte
+	db	srqdak & 0ffh	; srqdak - device interrupt acknowledge
+	db	srqack & 0ffh	; srqack
+	db	srq & 0ffh	; srq
+	db	decho & 0ffh	; decho
+	db	xcsmem & 0ffh	; csmem
+	db	xtram & 0ffh	; tram
+	db	xsint & 0ffh	; sint
 
-	jmp	X022d
+; remainder undefined
+	db	badc0x & 0ffh
+	db	badc0x & 0ffh
+	db	badc0x & 0ffh
+	db	badc0x & 0ffh
+	db	badc0x & 0ffh
 
-	jmp	X0258
+xcsmem:	jmp	csmem
 
-	jmp	X0264
+xtram:	jmp	tram
 
-X0142:	dis	i
+xsint:	jmp	sint
+
+badc0x:	jmp	badc1x
+
+reset:	dis	i
 	stop	tcnt
 	dis	tcnti
 	orl	p1,#0ffh
@@ -293,9 +301,11 @@ X015e:	mov	@r0,a
 
 X016b:	retr
 
-	jmp	X0264
 
-	mov	r0,#22h
+ereset:	jmp	badc1x
+
+
+systat:	mov	r0,#22h		; merge MSB of device status bytes from r22 through r25
 	mov	a,@r0
 	mov	r0,#23h
 	orl	a,@r0
@@ -305,8 +315,8 @@ X016b:	retr
 	orl	a,@r0
 	anl	a,#0f0h
 	mov	r1,a
-	jz	X0181
-	mov	r1,#80h
+	jz	X0181		; any devices have error?
+	mov	r1,#80h		; yes, set device error in system status byte
 X0181:	clr	a
 	mov	r0,#20h
 	xch	a,@r0
@@ -314,7 +324,7 @@ X0181:	clr	a
 	out	dbb,a
 	jmp	X005c
 
-	mov	r0,#22h
+dstat:	mov	r0,#22h		
 	mov	a,@r0
 	mov	r1,#0f0h
 	anl	a,r1
@@ -349,7 +359,8 @@ X01b2:	clr	a
 	out	dbb,a
 	jmp	X005c
 
-	mov	r5,#8
+; cmd 004h - device interrupt acknowledge
+srqdak:	mov	r5,#8
 	jmp	X0059
 
 X01be:	mov	a,r7
@@ -376,7 +387,7 @@ X01be:	mov	a,r7
 X01d9:	anl	p2,#7fh
 	jmp	X005c
 
-	clr	a
+srqack:	clr	a
 	mov	r0,#26h
 	mov	@r0,a
 	mov	r0,#21h
@@ -386,10 +397,10 @@ X01d9:	anl	p2,#7fh
 	anl	p2,#7fh
 	jmp	X005c
 
-	orl	p2,#80h
+srq:	orl	p2,#80h
 	jmp	X005c
 
-X01ef:	mov	r5,#9
+decho:	mov	r5,#9
 	jmp	X0059
 
 X01f3:	mov	a,r7
@@ -402,7 +413,8 @@ X01f8:	movp	a,@a
 
 	fillto	0200h,000h
 
-X0200:	clr	c
+; cmd 008h
+csmem:	clr	c
 	clr	a
 	mov	r3,a
 	mov	r4,a
@@ -437,7 +449,9 @@ X0227:	mov	a,#0ffh
 	out	dbb,a
 	jmp	X0059
 
-X022d:	sel	rb0
+
+; cmd 009h
+tram:	sel	rb0
 	mov	r0,#3fh
 	mov	a,#55h
 X0232:	mov	@r0,a
@@ -456,17 +470,22 @@ X0247:	mov	a,#0aah
 	xrl	a,@r0
 	jnz	X0252
 	djnz	r0,X0247
+
 	clr	a
 	out	dbb,a
-	jmp	X0142
+	jmp	reset
+
 
 X0252:	mov	a,#0ffh
 	cpl	f1
 	out	dbb,a
-	jmp	X0142
+	jmp	reset
 
-X0258:	mov	r5,#0ah
+
+; cmd 00ah
+sint:	mov	r5,#0ah
 	jmp	X0059
+
 
 X025c:	mov	r0,#28h
 	mov	a,r7
@@ -474,45 +493,60 @@ X025c:	mov	r0,#28h
 	mov	@r0,a
 	jmp	X005c
 
-X0264:	mov	r0,#20h
+badc1x:	mov	r0,#20h
 	mov	a,#40h
 	orl	a,@r0
 	mov	@r0,a
 	jmp	X0059
 
-X026c:	add	a,#X026f & 0ffh
+; handle commands 010h through 01fh
+; note that 010h has already been subtraced from command value in A
+cmd1x:	add	a,#ctbl1x & 0ffh
 	jmpp	@a
 
-X026f:	db	X028b & 0ffh
-	db	X02c4 & 0ffh
-	db	X02cc & 0ffh
-	db	X02ec & 0ffh
-	db	X027f & 0ffh
-	db	X0281 & 0ffh
-	db	X0283 & 0ffh
-	db	X0285 & 0ffh
-	db	X0287 & 0ffh
-	db	X0289 & 0ffh
-	db	X0264 & 0ffh
-	db	X0264 & 0ffh
-	db	X0264 & 0ffh
-	db	X0264 & 0ffh
-	db	X0264 & 0ffh
-	db	X0264 & 0ffh
+ctbl1x:
+; paper tape reader
+	db	rdrc & 0ffh	; rdrc
+	db	rstc & 0ffh	; rstc
 
-X027f:	jmp	X0304
+; paper tape punch
+	db	punc & 0ffh	; punc
+	db	pstc & 0ffh	; pstc
 
-X0281:	jmp	X0323
+; printer
+	db	xlptc & 0ffh	; lptc
+	db	xlstc & 0ffh	; lstc
 
-X0283:	jmp	X0348
+; PROM programmer
+	db	xwppc & 0ffh	; wppc
+	db	xrppc & 0ffh	; rppc
+	db	xrpstc & 0ffh	; rpstc
+	db	xrdpdc & 0ffh	; rdpdc
 
-X0285:	jmp	X0372
+; remainder undefined
+	db	badc1x & 0ffh
+	db	badc1x & 0ffh
+	db	badc1x & 0ffh
+	db	badc1x & 0ffh
+	db	badc1x & 0ffh
+	db	badc1x & 0ffh
 
-X0287:	jmp	X03a1
 
-X0289:	jmp	X038a
+xlptc:	jmp	lptc
 
-X028b:	mov	r5,#0
+xlstc:	jmp	lstc
+
+xwppc:	jmp	wppc
+
+xrppc:	jmp	rppc
+
+xrpstc:	jmp	rpstc
+
+xrdpdc:	jmp	rdpdc
+
+
+; cmd 010h
+rdrc:	mov	r5,#0
 	mov	r1,#22h
 	mov	r4,#4
 	mov	r3,#0eh
@@ -552,13 +586,18 @@ X02be:	mov	a,#80h
 	mov	@r1,a
 	jmp	X005c
 
-X02c4:	mov	r0,#22h
+
+; cmd 011h
+rstc:	mov	r0,#22h
 	call	X03d2
 	anl	a,#4
 	jmp	X0337
 
-X02cc:	mov	r5,#1
+
+; cmd 012h
+punc:	mov	r5,#1
 	jmp	X0059
+
 
 X02d0:	mov	r5,#0
 	mov	r1,#23h
@@ -578,10 +617,13 @@ X02d0:	mov	r5,#0
 
 X02ea:	jmp	X005c
 
-X02ec:	mov	r0,#23h
+
+; cmd 003h
+pstc:	mov	r0,#23h
 	call	X03d2
 	anl	a,#1
 	jmp	X0339
+
 
 	fillto	0300h,000h
 
@@ -589,9 +631,13 @@ X0300:	jmp	X005c
 
 X0302:	jmp	X02be
 
-X0304:	mov	r5,#2
+
+; cmd 014h
+lptc:	mov	r5,#2
 	jmp	X0059
 
+
+; command 002h
 X0308:	mov	r5,#0
 	mov	r1,#24h
 	mov	r4,#10h
@@ -609,7 +655,9 @@ X0308:	mov	r5,#0
 	anl	p2,#0f9h
 	jmp	X0053
 
-X0323:	mov	r0,#24h
+
+; command 015h
+lstc:	mov	r0,#24h
 	call	X03d2
 	anl	a,#50h
 	xrl	a,#40h
@@ -638,21 +686,27 @@ X0339:	mov	r1,a
 	out	dbb,a
 	jmp	X005c
 
-X0348:	mov	r5,#3
+
+; command 016h
+wppc:	mov	r5,#3
 	jmp	X0059
 
+
+; command 003h
 X034c:	mov	r5,#4
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
 
+; command 004h
 X0354:	mov	r5,#5
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f2h
 	jmp	X0053
 
+; command 005h
 X035c:	mov	r5,#0
 	mov	r1,#25h
 	call	X03c9
@@ -666,14 +720,18 @@ X035c:	mov	r5,#0
 	anl	p2,#0f0h
 	jmp	X0053
 
-X0372:	mov	r5,#6
+
+; command 017h
+rppc:	mov	r5,#6
 	jmp	X0059
+
 
 X0376:	mov	r5,#7
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
+
 
 X037e:	mov	r5,#0
 	mov	a,r7
@@ -682,7 +740,10 @@ X037e:	mov	r5,#0
 	anl	p2,#0efh
 	orl	p2,#10h
 	orl	p2,#7fh
-X038a:	mov	a,#8
+
+
+; command 019h
+rdpdc:	mov	a,#8
 	call	X00ec
 	orl	p1,#0ffh
 	mov	a,r7
@@ -696,7 +757,9 @@ X038a:	mov	a,#8
 	out	dbb,a
 X039f:	jmp	X0055
 
-X03a1:	mov	r0,#25h
+
+; command 018h
+rpstc:	mov	r0,#25h
 	mov	r5,#0
 	call	X03c9
 	jt1	X03c0
@@ -707,7 +770,7 @@ X03ac:	out	dbb,a
 	orl	p2,#10h
 	orl	p2,#7fh
 X03b2:	jnibf	X03b6
-	jmp	X0264
+	jmp	badc1x
 
 X03b6:	jobf	X03b2
 	mov	a,@r0
@@ -738,6 +801,7 @@ X03d2:	orl	p1,#0ffh
 	orl	p2,#7fh
 	ret
 
+
 X03de:	mov	a,r5
 	add	a,#X03e2 & 0ffh
 	jmpp	@a
@@ -762,7 +826,7 @@ X03f1:	jmp	X01f3
 
 X03f3:	jmp	X025c
 
-X03f5:	mov	r0,#020h
+x03f5:	mov	r0,#020h
 	mov	a,#020h
 	orl	a,@r0
 	mov	@r0,a
