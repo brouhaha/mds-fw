@@ -1,5 +1,8 @@
 ; Intel Intellec Series II/III MDS IOC parallel I/O controller (PIO) 8041A
 
+; RAM usage
+; 028h - interrupt mask, set with sint command from host
+
 	cpu	8041
 
 fillto	macro	dest,value
@@ -14,7 +17,7 @@ fillto	macro	dest,value
 	fillto	0003h,000h
 	jmp	ibfirq
 
-	add	a,#23h
+	db	003h,023h	; probably the checksum
 
 	fillto	0007h,000h
 	jmp	tmrirq
@@ -45,15 +48,18 @@ X0009:	orl	p1,#0ffh
 	orl	p2,#80h
 X002d:	jmp	X0009
 
+
 ibfirq:	clr	f0
 	cpl	f0
 	sel	rb1
 	mov	r2,a
 	orl	p2,#7fh
-	in	a,dbb
+
+	in	a,dbb		; get byte from host, save in r7
 	mov	r7,a
-	jf1	X003b
-	jmp	X03de
+
+	jf1	X003b		; command
+	jmp	X03de		; data
 
 X003b:	clr	f1
 	xch	a,r5
@@ -203,8 +209,11 @@ X00f8:	mov	r0,#26h
 	mov	@r0,a
 	ret
 
-X00fe:	movp	a,@a
+
+; get contents of a ROM page 0 location, for checksum computation
+getrp0:	movp	a,@a
 	ret
+
 
 X0100:	add	a,#3
 	jmpp	@a
@@ -363,6 +372,7 @@ X01b2:	clr	a
 srqdak:	mov	r5,#8
 	jmp	X0059
 
+; received srqdak byte
 X01be:	mov	a,r7
 	cpl	a
 	anl	a,#0fh
@@ -400,15 +410,20 @@ srqack:	clr	a
 srq:	orl	p2,#80h
 	jmp	X005c
 
+
+; command 007h
 decho:	mov	r5,#9
 	jmp	X0059
 
-X01f3:	mov	a,r7
+; received decho byte
+ddecho:	mov	a,r7
 	cpl	a
 	out	dbb,a
 	jmp	X005c
 
-X01f8:	movp	a,@a
+
+; get contents of a ROM page 1 location, for checksum computation
+getrp1:	movp	a,@a
 	ret
 
 	fillto	0200h,000h
@@ -419,32 +434,37 @@ csmem:	clr	c
 	mov	r3,a
 	mov	r4,a
 X0204:	mov	a,r3
-	call	X00fe
+	call	getrp0
 	addc	a,r4
 	mov	r4,a
 	djnz	r3,X0204
+
 X020b:	mov	a,r3
-	call	X01f8
+	call	getrp1
 	addc	a,r4
 	mov	r4,a
 	djnz	r3,X020b
+
 X0212:	mov	a,r3
 	movp	a,@a
 	addc	a,r4
 	mov	r4,a
 	djnz	r3,X0212
+
 X0218:	mov	a,r3
-	call	X03fd
+	call	getrp3
 	addc	a,r4
 	mov	r4,a
 	djnz	r3,X0218
+
 	mov	a,r4
 	add	a,#34h
 	jnz	X0227
-	out	dbb,a
+
+	out	dbb,a		; ROM checksum good, return 000h
 	jmp	X005c
 
-X0227:	mov	a,#0ffh
+X0227:	mov	a,#0ffh		; ROM checksum bad, return 0ffh
 	cpl	f1
 	out	dbb,a
 	jmp	X0059
@@ -471,12 +491,12 @@ X0247:	mov	a,#0aah
 	jnz	X0252
 	djnz	r0,X0247
 
-	clr	a
+	clr	a		; RAM OK, return 000h
 	out	dbb,a
 	jmp	reset
 
 
-X0252:	mov	a,#0ffh
+X0252:	mov	a,#0ffh		; RAM bad, return 0ffh
 	cpl	f1
 	out	dbb,a
 	jmp	reset
@@ -487,17 +507,20 @@ sint:	mov	r5,#0ah
 	jmp	X0059
 
 
-X025c:	mov	r0,#28h
+; data byte received for sint command
+dsint:	mov	r0,#28h
 	mov	a,r7
 	anl	a,#0fh
 	mov	@r0,a
 	jmp	X005c
 
+
 badc1x:	mov	r0,#20h
-	mov	a,#40h
+	mov	a,#40h		; illegal command bit
 	orl	a,@r0
 	mov	@r0,a
 	jmp	X0059
+
 
 ; handle commands 010h through 01fh
 ; note that 010h has already been subtraced from command value in A
@@ -599,6 +622,7 @@ punc:	mov	r5,#1
 	jmp	X0059
 
 
+
 X02d0:	mov	r5,#0
 	mov	r1,#23h
 	mov	r4,#1
@@ -692,21 +716,19 @@ wppc:	mov	r5,#3
 	jmp	X0059
 
 
-; command 003h
 X034c:	mov	r5,#4
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
 
-; command 004h
+
 X0354:	mov	r5,#5
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f2h
 	jmp	X0053
 
-; command 005h
 X035c:	mov	r5,#0
 	mov	r1,#25h
 	call	X03c9
@@ -802,29 +824,31 @@ X03d2:	orl	p1,#0ffh
 	ret
 
 
+; received a data byte from master
+; contents of r5 determine how to deal with it
 X03de:	mov	a,r5
 	add	a,#X03e2 & 0ffh
 	jmpp	@a
 
-X03e2:	db	X03f5 & 0ffh
-	db	X03ed & 0ffh
-	db	X0308 & 0ffh
-	db	X034c & 0ffh
-	db	X0354 & 0ffh
-	db	X035c & 0ffh
-	db	X0376 & 0ffh
-	db	X037e & 0ffh
-	db	X03ef & 0ffh
-	db	X03f1 & 0ffh
-	db	X03f3 & 0ffh
+X03e2:	db	X03f5 & 0ffh	; rdrc
+	db	X03ed & 0ffh	; punc
+	db	X0308 & 0ffh	; lptc
+	db	X034c & 0ffh	; wppc byte 1
+	db	X0354 & 0ffh	; wppc byte 2
+	db	X035c & 0ffh	; wppc byte 3
+	db	X0376 & 0ffh	; rppc byte 1
+	db	X037e & 0ffh	; rppc byte 2
+	db	X03ef & 0ffh	; srqdak
+	db	xddech & 0ffh	; decho
+	db	xdsint & 0ffh	; sint
 
 X03ed:	jmp	X02d0
 
 X03ef:	jmp	X01be
 
-X03f1:	jmp	X01f3
+xddech:	jmp	ddecho
 
-X03f3:	jmp	X025c
+xdsint:	jmp	dsint
 
 x03f5:	mov	r0,#020h
 	mov	a,#020h
@@ -832,7 +856,9 @@ x03f5:	mov	r0,#020h
 	mov	@r0,a
 	jmp	X005c
 
-X03fd:	movp	a,@a
+
+; get contents of a ROM page 3 location, for checksum computation
+getrp3:	movp	a,@a
 	ret
 
 	fillto	0400h,000h
