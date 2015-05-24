@@ -1,7 +1,14 @@
 ; Intel Intellec Series II/III MDS IOC parallel I/O controller (PIO) 8041A
 
+; The host interface is documented in chapter 5 of "Intellec(R) Series II
+; Microcomputer Development System Hardware Interface Manual", Intel order
+; number 9800555-03, July 1983
+
+; Reverse engineered by Eric Smith <spacewar@gmail.com>
+
 ; assembles with asl (Macro Assembler AS)
 ;   http://john.ccac.rwth-aachen.de:8000/as/
+
 
 ; Port assignments
 
