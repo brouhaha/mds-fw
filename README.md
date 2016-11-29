@@ -47,6 +47,11 @@ There are at least three released versions of the IOC 8080 firmware
 Presently this project has partially reverse-engineered source code
 for the enhanced IOC, in the ioc-enhanced directory.
 
+The source code is intended to be assembled using the
+[Macroassembler AS](http://john.ccac.rwth-aachen.de:8000/as/).
+Due to the use of long symbol names, it may not be possible to
+assemble it with native assemblers.
+
 
 ## License information:
 
