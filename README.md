@@ -40,12 +40,18 @@ paper tape punch, and UPP (Universal PROM Programmer).
 
 There are at least three released versions of the IOC 8080 firmware
 
-* original
-* enhanced - improved console, added soft function keys and better cursor control
-* IOC-III - uses new version of IOC hardware
+* original (unenhanced) - part numbers unknown
+* enhanced - part numbers 104593-001 through -004
+* enhanced - part numbers 104688-001 through -004
+* enhanced - part numbers 104692-001 through -004
+* IOC-III - uses new version of IOC hardware - part numbers unknown
+
+The enhanced firmware add improved console support with function
+key macros and better cursor control
 
 Presently this project has partially reverse-engineered source code
-for the enhanced IOC, in the ioc-enhanced directory.
+for the enhanced IOC, part numbers 104692-00x, in the ioc-enhanced
+directory.
 
 The source code is intended to be assembled using the
 [Macroassembler AS](http://john.ccac.rwth-aachen.de:8000/as/).
