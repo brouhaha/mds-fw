@@ -86,25 +86,19 @@ cccls	equ	29	; clear screen but don't home cursor
 cccles	equ	30	; clear from begining of this line to end of screen
 ccceos	equ	31	; clear to end of screen
 ccclrl	equ	32	; clear entire line
-ccceol	equ	32	; clear to end of line
-ccidln	equ	33	; insert and delete line
-ccidch	equ	34	; insert and delete character
+ccceol	equ	33	; clear to end of line
+ccidln	equ	34	; insert and delete line
+ccidch	equ	35	; insert and delete character
+
 ccuser	equ	128	; start of user-defined cases
 
 
 ; 5b00-5bff - conout primary case numbers
 r5b00	ds	256
 
-r5b20	equ	r5b00+020h
-r5b80	equ	r5b00+080h
-
 
 ; 5c00-5cff - conout escape case numbers
 r5c00	ds	256
-
-r5c41	equ	r5c00+'A'
-r5c61	equ	r5c00+'a'
-r5c80	equ	r5c00+080h
 
 
 ; 5d00-5dff - keyboard cases table

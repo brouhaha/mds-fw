@@ -60,7 +60,7 @@ l1023:	push	psw
 	jnz	l1023
 	lhld	r5f38
 	shld	r5f49
-	call	s15d1
+	call	doclsh
 	sub	a
 	call	s170b
 	call	xs100c
@@ -133,7 +133,7 @@ l1098:	jz	l10d0
 	sub	c
 	sta	r5f38
 	pop	psw
-	jmp	l1503
+	jmp	donop
 
 l10ad:	cpi	0feh		; is data byte 0feh, escaping following byte?
 	jnz	l10c1		; no
@@ -351,7 +351,7 @@ l11de:	mov	m,e
 	ori	004h
 	sta	r5fec
 l1206:	lxi	h,r5a80
-	lxi	d,r5c80
+	lxi	d,r5c00+80h
 	call	s0023
 	call	s1812
 	lxi	h,d1289
@@ -359,12 +359,12 @@ l1206:	lxi	h,r5a80
 	mvi	c,00bh
 	call	s1803
 	call	s1245
-	lxi	d,r5c41
+	lxi	d,r5c00+'A'
 	call	s1264
-	lxi	d,r5c61
+	lxi	d,r5c00+'a'
 	call	s1264
 	call	s126c
-	call	s15d1
+	call	doclsh
 	sub	a	
 	call	s170b
 	lxi	h,scrend
@@ -385,7 +385,7 @@ s1245:	mvi	c,000h
 	lxi	d,d178b
 l1256:	push	d	
 	lxi	h,r5b00
-	lxi	d,r5b20
+	lxi	d,r5b00+' '
 	call	s0025
 	pop	d
 	jmp	s1806
@@ -397,10 +397,10 @@ s1264:	lxi	h,d1771
 
 
 s126c:	lxi	h,r5b00
-	lxi	d,r5b80
+	lxi	d,r5b00+80h
 	call	s127b
 	lxi	h,r5c00
-	lxi	d,r5c80
+	lxi	d,r5c00+80h
 
 s127b:	mov	a,m
 	ana	a	
@@ -708,7 +708,7 @@ l143c:	mov	e,a
 	ret
 
 
-l1448:	mov	a,c
+domsb0:	mov	a,c
 	ani	07fh
 	mov	c,a
 
@@ -726,22 +726,23 @@ l144c:	lhld	r5f36
 	dcr	l
 	lda	r5af0
 	rrc
-	jnc	l1509
+	jnc	docurr
 	jmp	xs1015
 
 
-l146b:	call	xs1018
+; console output case: escape
+doesc:	call	xs1018
 	mvi	b,05ch
 	jmp	r5ff7
 
 
 ; console output case: bell
-l1473:	out	strtbel
+dobell:	out	strtbel
 	ret	
 
 
 ; console output case: set user flag (ESC X function)
-l1476:	call	xs101b
+doflag:	call	xs101b
 	mov	a,b
 	ori	080h
 	mov	l,a
@@ -754,8 +755,8 @@ l1476:	call	xs101b
 	rrc
 	jnc	s126c
 	
-	lxi	h,r5b80
-	lxi	d,r5c00
+	lxi	h,r5b00+80h
+	lxi	d,r5b00+100h
 	jmp	s0023
 
 l1493:	cpi	082h
@@ -775,47 +776,47 @@ l1493:	cpi	082h
 	jmp	l170e
 
 
-l14ac:	lda	r5af8
+domark:	lda	r5af8
 	mov	c,a
 	jmp	l144c
 
 
-l14b3:	mvi	c,' '
+dospc:	mvi	c,' '
 	jmp	l144c
 
 
-l14b8:	call	s1531
+dorubo:	call	doculw
 	lhld	r5f36
 	lda	r5af7
 	mov	m,a
 	ret
 
 
-l14c3:	call	xs1018
+dolit:	call	xs1018
 	jmp	l144c
 
 
-l14c9:	call	xs1018
+domsb1:	call	xs1018
 	mvi	a,080h
 	ora	c	
 	mov	c,a
 	jmp	l144c
 
 
-l14d3:	dcr	l
+doculf:	dcr	l
 	jp	xs1015
 
 	ret
 
 
-l14d8:	call	s1561
+docuuf:	call	s1561
 	dcr	h
 	jp	xs1015
 
 	ret
 
 
-l14e0:	inr	l
+docurf:	inr	l
 	lda	r5f43
 	cmp	l
 	jnz	xs1015
@@ -823,34 +824,34 @@ l14e0:	inr	l
 	ret
 
 
-l14e9:	inr	h	
+docudf:	inr	h	
 	call	s1561
 	jmp	xs1015
 
 
-l14f0:	dcr	l
+doculr:	dcr	l
 	jp	xs1015
 
 	mvi	l,04fh
-l14f6:	call	s155c
+docuur:	call	s155c
 	dcr	h
 	jp	xs1015
 
 	mov	c,a
 	mvi	b,000h
 	call	s131a
-l1503:	lhld	r5f38
+donop:	lhld	r5f38
 	jmp	xs1015
 
 
-l1509:	inr	l	
+docurr:	inr	l	
 	lda	r5f43
 	sub	l
 	jnz	xs1015
 
 	lda	r5f42
 	mov	l,a
-l1515:	call	s155c
+docudr:	call	s155c
 	inr	h
 	call	s16e2
 
@@ -866,13 +867,13 @@ xs1015:	shld	r5f38
 	ret	
 
 
-s1531:	dcr	l
+doculw:	dcr	l
 	jp	xs1015
 
 	lda	r5f43
 	dcr	a
 	mov	l,a
-l153a:	call	s155c
+docuuw:	call	s155c
 	dcr	h
 	jp	xs1015
 
@@ -880,15 +881,15 @@ l153a:	call	s155c
 	jmp	xs1015
 
 
-l1545:	inr	l
+docurw:	inr	l
 	lda	r5f43
 	sub	l
 	jnz	xs1015
 
 	lda	r5f42
 	mov	l,a
-l1551:	call	s155c
-	jnz	l14e9
+docudw:	call	s155c
+	jnz	docudf
 
 	mvi	h,000h
 	jmp	xs1015
@@ -907,7 +908,7 @@ s1561:	lda	r5af1
 	ret
 
 
-l1569:	call	xs101b
+dogoxy:	call	xs101b
 	lhld	r5f38
 	shld	r5f3c
 	lda	r5af2
@@ -945,7 +946,7 @@ s158c:	lda	r5af1
 	ret
 
 
-l1599:	call	xs1018
+dogopa:	call	xs1018
 	mov	a,c
 	sui	020h
 	rc
@@ -983,12 +984,12 @@ l15bc:	xchg
 	jmp	xs1015
 
 
-l15cb:	lhld	r5f3c
+dorest:	lhld	r5f3c
 	jmp	xs1015
 
 
-s15d1:	call	s0005
-l15d4:	mvi	a,001h
+doclsh:	call	s0005
+dohome:	mvi	a,001h
 	sta	r5f40
 	sub	a
 	mov	b,a
@@ -997,7 +998,7 @@ l15d4:	mvi	a,001h
 	jmp	s157c
 
 
-l15e2:	lhld	r5f3a
+docles:	lhld	r5f3a
 l15e5:	xchg
 	call	s171a
 	xchg
@@ -1015,15 +1016,15 @@ l15e5:	xchg
 	jmp	s1617
 
 
-l15ff:	lhld	r5f36
+doceos:	lhld	r5f36
 	jmp	l15e5
 	
 
-l1605:	lhld	r5f3a
+doclrl:	lhld	r5f3a
 	jmp	l003b
 
 
-l160b:	lhld	r5f3a
+doceol:	lhld	r5f3a
 	mvi	d,000h
 	mvi	e,050h
 	dad	d
@@ -1034,7 +1035,7 @@ s1617:	lda	r5af7
 	jmp	s0025
 
 
-l161e:	call	xs101b
+doidln:	call	xs101b
 	mov	a,b
 	call	s1638
 	mov	b,a
@@ -1043,7 +1044,7 @@ l161e:	call	xs101b
 	mov	c,a
 	call	s131a
 	lhld	r5f38
-l1631:	lda	r5f42
+doret:	lda	r5f42
 	mov	l,a
 	jmp	xs1015
 
@@ -1070,7 +1071,7 @@ l1651:	lxi	h,r5af1
 	ret
 
 
-l1659:	call	xs101b
+doidch:	call	xs101b
 	mov	a,c
 	call	s168d
 	mov	c,a
@@ -1224,54 +1225,77 @@ s171d:	call	s1714
 
 
 ; dispatch for console output case numbers, starting with one
-d172b:	dw	l146b	; escape
-	dw	l1473	; ring bell
-	dw	l1503	; do nothing
-	dw	l1476	; set user flag (ESC X function)
-	dw	l14ac
-	dw	l14b3
-	dw	l14b8
-	dw	l14c3
-	dw	l1448
-	dw	l14c9
-	dw	l14d3
-	dw	l14d8
-	dw	l14e0
-	dw	l14e9
-	dw	l14f0
-	dw	l14f6
-	dw	l1509
-	dw	l1515
-	dw	s1531
-	dw	l153a
-	dw	l1545
-	dw	l1551
-	dw	l1569
-	dw	l1599
-	dw	l15cb
-	dw	l1631
-	dw	l15d4
-	dw	s15d1
-	dw	s0005
-	dw	l15e2
-	dw	l15ff
-	dw	l1605
-	dw	l160b
-	dw	l161e
-	dw	l1659
+d172b:	dw	doesc	; ccesc:  escape
+	dw	dobell	; ccbell: ring bell
+	dw	donop	; ccnop:  do nothing
+	dw	doflag	; ccflag: set user flag (ESC X function)
+	dw	domark	; ccmark: display visible marker
+	dw	dospc	; ccspc:  output a space
+	dw	dorubo	; ccrubo: rubout
+	dw	dolit 	; cclit:  display next char literally
+	dw	domsb0	; ccmsb0: display next char with top bit masked off
+	dw	domsb1	; ccmsb1: display next char with top bit turned on
+	dw	doculf	; ccculf: cursor left freeze
+	dw	docuuf	; cccuuf: cursor up freeze
+	dw	docurf	; cccurf: cursor right freeze
+	dw	docudf	; cccudf: cursor down freeze
+	dw	doculr	; ccculr: cursor left roll
+	dw	docuur	; cccuur: cursor up roll
+	dw	docurr	; cccurr: cursor right roll
+	dw	docudr	; cccudr: cursor down roll
+	dw	doculw	; ccculw: cursor left wrap
+	dw	docuuw	; cccuuw: cursor up wrap
+	dw	docurw	; cccurw: cursor right wrap
+	dw	docudw	; cccudw: cursor down wrap
+	dw	dogoxy	; ccgoxy: cursor go to coordinates (ESC Y function)
+	dw	dogopa	; ccgopa: cursor go to partition (ESC M function)
+	dw	dorest	; ccrest: restore cursor to value before last ccgoxy
+	dw	doret	; ccret:  carriage return, go to start of current line
+	dw	dohome	; cchome: home the cursor within paritition
+	dw	doclsh	; ccclsh: clear screen and home cursor
+	dw	s0005	; cccls:  clear screen but don't home cursor
+	dw	docles	; cccles: clear this line (all) to end of screen
+	dw	doceos	; ccceos: clear to end of screen
+	dw	doclrl	; ccclrl: clear entire line
+	dw	doceol	; ccceol: clear to end of line
+	dw	doidln	; ccidln: insert and delete line
+	dw	doidch	; ccidch: insert and delete character
 
-d1771:	db	014h,012h,011h,013h,01ch,000h,000h,01bh
-	db	023h,01eh,020h,00ah,018h,00ch,00eh,00dh
-	db	00bh,021h,01fh,01dh,010h,007h,022h,004h
-	db	017h,019h
+; default mapping for escape sequences
+d1771:	db	cccuuw	; ESC A - cursor up wrap
+	db	cccudr	; ESC B - cursor down roll
+	db	cccurr	; ESC C - cursor right roll
+	db	ccculw	; ESC D - cursor left wrap
+	db	ccclsh	; ESC E - clear screen and home
+	db	000h	; ESC F
+	db	000h	; ESC G
+	db	cchome	; ESC H - home cursor
+	db	ccidch	; ESC I - insert and delete character
+	db	cccles	; ESC J - clear from begining of this line to end of screen
+	db	ccclrl	; ESC K - clear current line
+	db	ccmsb1	; ESC L - display next char with top bit turned on (attribute)
+	db	ccgopa	; ESC M - cursor go to partition
+	db	cccuuf	; ESC N - cursor up freeze
+	db	cccudf	; ESC O - cursor down freeze
+	db	cccurf	; ESP P - cursor right freeze
+	db	ccculf	; ESC Q - cursor left freeze
+	db	ccceol	; ESC R - clear to end of line
+	db	ccceos	; ESC S - clear to end of screen
+	db	cccls	; ESC T - clear screen but don't home cursor
+	db	cccuur	; ESC U - cursor up roll
+	db	ccrubo	; ESC V - rubout: cursor left wrap, then blank char
+	db	ccidln	; ESC W - insert and delete line
+	db	ccflag	; ESC X - set user flag
+	db	ccgoxy	; ESC Y - go to coordinates
+	db	ccrest	; ESC Z - restore cursor to value before last goxy
 
 ; init of sparse table
-d178b:	db	014h,cccurr	; cursor right roll
-	db	01ch,cccudr	; cursor down roll
-	db	01dh,cchome	; home cursor within partition
-	db	01eh,cccuuw	; cursor up wrap
-	db	01fh,ccculw	; cursor left wrap
-	db	07fh,ccnop	; rubout - ignore
+d178b:	db	014h,cccurr	; right arrow - cursor right roll
+	db	01ch,cccudr	; down arrow  - cursor down roll
+	db	01dh,cchome	; home        - home cursor within partition
+	db	01eh,cccuuw	; up arrow    - cursor up wrap
+	db	01fh,ccculw	; left arrow  - cursor left wrap
+	db	07fh,ccnop	; rubout      - ignore
 
 d1797:	db	007h,ccbell	; bell
 	db	008h,ccculw	; backspace - cursor left wrap
