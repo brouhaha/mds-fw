@@ -10,6 +10,23 @@
 ;   http://john.ccac.rwth-aachen.de:8000/as/
 
 
+ 		ifndef	mod220
+mod220		equ	0
+		endif
+
+		ifndef	mod230
+mod230		equ	0
+		endif
+
+		ifndef	m104566_001
+m104566_001	equ	0
+		endif
+
+	if	(mod220+mod230+m104566_001) <> 1
+	fatal	"must select one version to assemble on command line"
+	endif
+
+
 ; Port assignments
 
 ;   TEST1 - PPACK, J7-2 to UPP
@@ -60,13 +77,22 @@ fillto	macro	dest,value
 	endm
 	endm
 
+
 	org	0
 	jmp	reset
 
 	fillto	0003h,000h
 	jmp	ibfirq
 
+	if	mod220
+	db	012h,012h
+	endif
+	if	mod230
 	db	003h,023h
+	endif
+	if	m104566_001
+	db	007h,016h
+	endif
 
 	fillto	0007h,000h
 	jmp	tmrirq
@@ -130,6 +156,7 @@ X0041:	xch	a,r5
 	jmp	cmd1x
 
 X0051:	jmp	cmd0x
+
 
 X0053:	anl	p2,#0efh	; pulse 74154 enable
 X0055:	orl	p2,#10h
@@ -201,13 +228,25 @@ X00b0:	xch	a,@r0
 	mov	@r0,a
 	ret
 
-X00b6:	mov	r3,#96h
+X00b6:
+	if	mod220
+	mov	r3,#2
+	endif
+	if	mod230 | m104566_001
+	mov	r3,#96h
+	endif
+
 X00b8:	jt1	X00bc
 	jmp	X00d5
 
+	if	mod220
+X00bc:	jtf	X00c0
+X00be:	jmp	X00b8
+	endif
+	if	mod230 | m104566_001
 X00bc:	jmp	X00be
-
 X00be:	jmp	X00c0
+	endif
 
 X00c0:	djnz	r3,X00b8
 	orl	p2,#10h
@@ -229,6 +268,7 @@ X00d5:	clr	c
 	cpl	c
 	ret
 
+
 X00d8:	call	X03d2
 	anl	a,r4
 	jz	X00e0
@@ -245,6 +285,7 @@ X00e4:	djnz	r3,X00d8
 	mov	@r1,a
 	clr	c
 	ret
+
 
 X00ec:	mov	r4,a
 	mov	r0,#28h
@@ -267,20 +308,21 @@ getrp0:	movp	a,@a
 	ret
 
 
-X0100:	add	a,#3
+X0100:	add	a,#X0103 & 0ffh
 	jmpp	@a
 
-	jmp	X010e
+X0103:	db	X0124 & 0ffh
+	db	X010e & 0ffh
+	db	X0118 & 0ffh
+	db	X011c & 0ffh
+	db	X011c & 0ffh
+	db	X011c & 0ffh
+	db	X011c & 0ffh
+	db	X011c & 0ffh
+	db	X0120 & 0ffh
+	db	X0120 & 0ffh
+	db	X0120 & 0ffh
 
-	inc	r0
-	inc	r4
-	inc	r4
-	inc	r4
-	inc	r4
-	inc	r4
-	xch	a,@r0
-	xch	a,@r0
-	xch	a,@r0
 X010e:	mov	r0,#23h
 X0110:	mov	a,#20h
 	orl	a,@r0
@@ -288,16 +330,17 @@ X0110:	mov	a,#20h
 	mov	r5,#0
 	jmp	X0041
 
-	mov	r0,#24h
+X0118:	mov	r0,#24h
 	jmp	X0110
 
-	mov	r0,#25h
+X011c:	mov	r0,#25h
 	jmp	X0110
 
-	mov	r0,#20h
+X0120:	mov	r0,#20h
 	jmp	X0110
 
-	jmp	X005c
+X0124:	jmp	X005c
+
 
 ; handle commands 000h through 00fh
 cmd0x:	mov	a,r6
@@ -332,16 +375,33 @@ xsint:	jmp	sint
 badc0x:	jmp	badc1x
 
 
-reset:	dis	i
+reset:
+	if	mod220 | mod230
+	dis	i
+	endif
+
 	stop	tcnt
 	dis	tcnti
+
+	if	m104566_001
+	dis	i
+	jtf	$+2
+	endif
+
 	orl	p1,#0ffh
 	mov	a,#7fh
 	outl	p2,a
 	anl	p2,#0f5h
 	anl	p2,#0efh
 
+	if	mod220 | mod230
 	mov	a,#0ffh		; start timer and verify that it works
+	endif
+
+	if	m104566_001
+	mov	a,#000h		; start timer and verify that it works
+	endif
+	
 	mov	t,a
 	strt	t
 X0152:	jtf	X0156
@@ -520,7 +580,17 @@ X0218:	mov	a,r3
 	djnz	r3,X0218
 
 	mov	a,r4
+
+	if	mod220
+	add	a,#0f9h
+	endif
+	if	mod230
 	add	a,#34h
+	endif
+	if	m104566_001
+; do nothing
+	endif
+	
 	jnz	X0227
 
 	out	dbb,a		; ROM checksum good, return 000h
@@ -711,6 +781,11 @@ pstc:	mov	r0,#23h
 	call	X03d2
 	anl	a,#1
 	jmp	X0339
+
+
+	if	m104566_001
+	db	03bh
+	endif
 
 
 	fillto	0300h,000h
