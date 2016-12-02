@@ -1,5 +1,11 @@
 all: ioc-a50.bin ioc-a51.bin ioc-a52.bin ioc-a53.bin
 
+check: ioc-a5x.sha256 ioc-a50.bin ioc-a51.bin ioc-a52.bin ioc-a53.bin
+	sha256sum -c ioc-a5x.sha256
+
+clean:
+	rm *.lst *.p *.bin
+
 hexdiff-a50: ioc-a50.bin
 	hexdiff ioc-a50.bin ../ioc_a50_104692-001.bin
 
