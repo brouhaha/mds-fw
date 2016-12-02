@@ -4,6 +4,9 @@
 	include	ioc-flp.inc
 	include ioc-mac.inc
 
+	include ioc-ram.inc
+
+	
 ; entry points in ROM 1
 l0800	equ	00800h
 s0803	equ	00803h
@@ -15,50 +18,6 @@ s080c	equ	0080ch
 s1000	equ	01000h
 s100c	equ	0100ch
 
-; RAM, 4000h..5fffh
-
-rambase	equ	04000h
-
-	org	rambase
-cursor	ds	2	; pointer into screen buffer for cursor loc
-r4002	ds	1
-r4003	ds	1
-r4004	ds	1
-r4005	ds	1
-r4006	ds	1
-r4007	ds	1
-r4008	ds	1
-r4009	ds	1
-r400a	ds	1
-
-	org	040d0h
-r40d0	ds	2
-r40d2	ds	2
-
-	org	041f7h
-moshad	ds	1	; RAM shadow of miscout register
-
-r41f8	ds	1
-r41f9	ds	1
-	ds	1
-r41fb	ds	2
-
-	org	05230h
-scrbeg	ds	24*80	; start of screen buffer
-scrend:			; ends at 05a00h (last byte used 059ffh)
-
-crsrfmt	equ	05af5h
-
-r5af7	equ	05af7h
-
-rst1	equ	05fa8h
-rst2	equ	05fabh
-rst3	equ	05faeh
-rst4	equ	05fb1h
-rst5	equ	05fb4h
-rst6	equ	05fb7h
-
-rst7	equ	05fc0h
 
 	org	00000h
 
@@ -798,7 +757,7 @@ l04d8:	call	s080c
 l04f7:	call	s0806
 	call	s0806
 	mvi	l,d0402ln
-	lxi	d,r41f8
+	lxi	d,iopb+iopbocw	; IOPB channel word
 	lxi	b,d0402
 l0505:	ldax	b
 	stax	d
@@ -815,7 +774,7 @@ l0512:	mvi	a,maxtrk-1
 	jc	l0536
 
 	lda	r4002
-	sta	r41fb
+	sta	iopb+iopbotk	; IOPB track
 	call	s0803
 	call	s05db
 	rar
@@ -827,7 +786,7 @@ l052c:	lda	r4002
 	sta	r4002
 	jnz	l0512
 
-l0536:	lxi	h,r41f9
+l0536:	lxi	h,iopb+iopboin	; IOPB disk information
 	mvi	m,006h
 	inx	h	
 	mvi	m,003h
@@ -848,7 +807,7 @@ l0543:	mvi	a,009h
 	inx	h	
 	mov	d,m
 	xchg
-	shld	r41fb
+	shld	iopb+iopbotk	; IOPB track
 
 	lhld	r4002
 	mvi	h,000h
@@ -870,7 +829,7 @@ l0578:	lda	r4002
 	sta	r4002
 	jnz	l0543
 
-l0582:	lxi	h,r41f9
+l0582:	lxi	h,iopb+iopboin	; IOPB disk information
 	mvi	m,004h
 	lxi	h,r4002
 	mvi	m,000h
@@ -889,7 +848,7 @@ l058c:	mvi	a,009h
 	inx	h
 	mov	d,m
 	xchg
-	shld	r41fb
+	shld	iopb+iopbotk	; IOPB track
 	call	s0803
 	call	s05db
 	rar

@@ -43,8 +43,8 @@ s100c:	jmp	xs100c
 	jmp	00000h		; unreferenced?
 s1012:	jmp	xs1012
 	jmp	xs1015		; unreferenced?
-	jmp	xs1018		; unreferenced?
-	jmp	xs101b		; unreferenced?
+	jmp	cget1b		; unreferenced?
+	jmp	cget2b		; unreferenced?
 
 	
 xs1009:	lxi	d,databf
@@ -58,13 +58,13 @@ l1023:	push	psw
 	inr	a
 	cpi	019h
 	jnz	l1023
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 	shld	r5f49
 	call	doclsh
 	sub	a
 	call	s170b
 	call	xs100c
-	call	xs1018
+	call	cget1b
 	push	b
 
 	lxi	h,databf	; copy 2000 byts from databf to screen
@@ -109,7 +109,7 @@ xcblkm:	out	iocbusy
 
 	mov	a,c		; was bit 5 set?
 	ani	020h
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 	jnz	l1092		; no
 
 	call	mget1d		; yes, get coordinates
@@ -118,7 +118,7 @@ xcblkm:	out	iocbusy
 	mov	c,a		; C = col
 	sub	a
 	call	s157c
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 
 l1092:	call	s1127
 
@@ -131,7 +131,7 @@ l1098:	jz	l10d0
 
 	mvi	a,050h		; done
 	sub	c
-	sta	r5f38
+	sta	crscol
 	pop	psw
 	jmp	donop
 
@@ -202,7 +202,7 @@ bmrdch:	in	dbbstat
 	jmp	bmrdch
 
 
-s110d:	lhld	r5f38
+s110d:	lhld	crscol		; and crsrow
 	mvi	l,000h
 	inr	h
 	lda	r5af1
@@ -212,12 +212,12 @@ s110d:	lhld	r5f38
 	mov	h,l
 	jmp	s1127
 
-s111f:	lhld	r5f38
+s111f:	lhld	crscol		; and crsrow
 	mov	l,a
 	inr	h
 	call	s16e2
 
-s1127:	shld	r5f38
+s1127:	shld	crscol		; and crsrow
 	mov	e,l	
 	lda	nrolls
 	add	h
@@ -281,8 +281,8 @@ l116b:	mov	c,a
 
 
 xs1000:	lhld	d0812
-	shld	d41ea
-	lxi	h,d41ec
+	shld	r41ea
+	lxi	h,r41ec
 	lxi	d,databf
 	call	s0023
 	sub	a
@@ -308,7 +308,7 @@ xs1000:	lhld	d0812
 	ani	kbpres
 	rlc	
 	rlc	
-	sta	d41f4
+	sta	r41f4
 	ret
 	
 
@@ -368,7 +368,7 @@ l1206:	lxi	h,r5a80
 	sub	a	
 	call	s170b
 	lxi	h,scrend
-	shld	d41ea
+	shld	r41ea
 	xchg
 	lhld	d0812
 	mvi	c,040h
@@ -704,7 +704,7 @@ l143c:	mov	e,a
 	inx	h
 	mov	d,m
 	push	d
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 	ret
 
 
@@ -716,13 +716,13 @@ l144c:	lhld	r5f36
 	mov	m,c	
 	inx	h
 	shld	r5f36
-	lxi	h,r5f38
+	lxi	h,crscol	; and crsrow
 	inr	m
 	lda	r5f43
 	cmp	m
 	rnz
 
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 	dcr	l
 	lda	r5af0
 	rrc
@@ -731,7 +731,7 @@ l144c:	lhld	r5f36
 
 
 ; console output case: escape
-doesc:	call	xs1018
+doesc:	call	cget1b
 	mvi	b,05ch
 	jmp	r5ff7
 
@@ -742,7 +742,7 @@ dobell:	out	strtbel
 
 
 ; console output case: set user flag (ESC X function)
-doflag:	call	xs101b
+doflag:	call	cget2b
 	mov	a,b
 	ori	080h
 	mov	l,a
@@ -792,11 +792,11 @@ dorubo:	call	doculw
 	ret
 
 
-dolit:	call	xs1018
+dolit:	call	cget1b
 	jmp	l144c
 
 
-domsb1:	call	xs1018
+domsb1:	call	cget1b
 	mvi	a,080h
 	ora	c	
 	mov	c,a
@@ -840,7 +840,7 @@ docuur:	call	s155c
 	mov	c,a
 	mvi	b,000h
 	call	s131a
-donop:	lhld	r5f38
+donop:	lhld	crscol		; and crsrow
 	jmp	xs1015
 
 
@@ -855,7 +855,7 @@ docudr:	call	s155c
 	inr	h
 	call	s16e2
 
-xs1015:	shld	r5f38
+xs1015:	shld	crscol		; and crsrow
 	mov	c,l
 	lda	nrolls
 	add	h
@@ -908,8 +908,8 @@ s1561:	lda	r5af1
 	ret
 
 
-dogoxy:	call	xs101b
-	lhld	r5f38
+dogoxy:	call	cget2b
+	lhld	crscol		; and crsrow
 	shld	r5f3c
 	lda	r5af2
 	add	a
@@ -946,7 +946,7 @@ s158c:	lda	r5af1
 	ret
 
 
-dogopa:	call	xs1018
+dogopa:	call	cget1b
 	mov	a,c
 	sui	020h
 	rc
@@ -961,7 +961,7 @@ dogopa:	call	xs1018
 
 	lhld	r5f47
 	xchg
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 	mov	a,h
 	sub	b
 	jnc	l15bc
@@ -994,7 +994,7 @@ dohome:	mvi	a,001h
 	sub	a
 	mov	b,a
 	mov	c,a
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 	jmp	s157c
 
 
@@ -1035,7 +1035,7 @@ s1617:	lda	r5af7
 	jmp	s0025
 
 
-doidln:	call	xs101b
+doidln:	call	cget2b
 	mov	a,b
 	call	s1638
 	mov	b,a
@@ -1043,7 +1043,7 @@ doidln:	call	xs101b
 	call	s1638
 	mov	c,a
 	call	s131a
-	lhld	r5f38
+	lhld	crscol		; and crsrow
 doret:	lda	r5f42
 	mov	l,a
 	jmp	xs1015
@@ -1056,7 +1056,7 @@ s1638:	ani	07fh
 	lxi	h,r5af1
 	jc	l164c
 
-	lxi	h,r5f39
+	lxi	h,crsrow
 	sui	020h
 l164c:	add	m
 	jp	l1651
@@ -1071,7 +1071,7 @@ l1651:	lxi	h,r5af1
 	ret
 
 
-doidch:	call	xs101b
+doidch:	call	cget2b
 	mov	a,c
 	call	s168d
 	mov	c,a
@@ -1111,7 +1111,7 @@ s168d:	cpi	050h
 	rc
 
 	sui	0a0h
-	lxi	h,r5f38
+	lxi	h,crscol		; and crsrow
 	add	m
 	jp	l169a
 
@@ -1130,9 +1130,9 @@ xs1012:	lda	crsrfmt
 	di
 	mvi	a,080h
 	out	crtcmd
-	lda	r5f38
+	lda	crscol
 	out	crtparm
-	lda	r5f39
+	lda	crsrow
 	out	crtparm
 	ei
 	ret
@@ -1148,19 +1148,25 @@ xs100c:	di
 	ret
 
 
-xs101b:	pop	h
+; Get two console argument bytes
+cget2b:	pop	h
 	shld	r5f45
-	call	xs1018
+	call	cget1b
+
 	mov	a,c
 	sta	r5f3f
-	call	xs1018
+	call	cget1b
 	lda	r5f3f
 	mov	b,a
 	lhld	r5f45
 	pchl
 
 
-xs1018:	pop	h
+; Get one console argument byte
+; Doesn't return to caller, sets a pointer to
+; return to caller later, when the byte has been
+; received, then returns to caller's caller.
+cget1b:	pop	h
 	shld	r5fbe
 
 	mvi	a,0f7h		; rst 6 opcode

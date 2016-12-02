@@ -3,7 +3,10 @@
 	include	ioc-io.inc
 	include	ioc-flp.inc
 	include ioc-mac.inc
-	
+
+	include ioc-ram.inc
+
+
 ; entry points in ROM 0
 
 s000b	equ	0000bh	; RAM test
@@ -23,68 +26,6 @@ kstc	equ	0180ch	; cmd 013h - Returns keyboard status byte to master.
 s180f	equ	0180fh
 s1815	equ	01815h
 s181b	equ	0181bh
-
-; RAM, 4000h..5fffh
-
-	org	04000h
-	ds	128
-stack:
-
-	org	04101h
-r4101:	ds	1
-iopbcnt	ds	1	; count of IOPB bytes received
-r4103:	ds	1
-r4104:	ds	1
-r4105:	ds	1
-r4106:	ds	1
-	ds	1
-	ds	1
-r4109:	ds	1
-r410a:	ds	1
-r410b:	ds	2
-r410d:	ds	1
-r410e:	ds	1
-r410f:	ds	1
-r4110:	ds	1
-r4111:	ds	1
-
-	org	041ech
-r41ec:	ds	1
-r41ed:	ds	1
-r41ee:	ds	1
-r41ef:	ds	1
-intena:	ds	1	; interrupt enables
-systatb	ds	1
-dstatb:	ds	1
-crtstb:	ds	1	; CRT status byte
-r41f4:	ds	1
-r41f5:	ds	1
-r41f6:	ds	1
-moshad:	ds	1	; RAM shadow of miscout register
-iopb:	ds	iopbsiz
-r41fd:	ds	1
-r41fe:	ds	1
-dskstb:	ds	1	; diskette status byte
-
-databf:	ds	26*128	; 04200h through 04f00h
-
-crtrows	equ	25
-crtcols	equ	80
-crtsize	equ	crtrows*crtcols
-
-	org	05230h
-scrbeg:	ds	crtsize	; start of screen buffer
-scrend:			; ends at 05a00h (last byte used 059ffh)
-
-	org	05af4h
-r5af4:	ds	1
-
-	org	05f38h
-crscol:	ds	1	; cursor column
-crsrow:	ds	1	; cursor row
-
-	org	05ff5h
-r5ff5:			; code, size unknown
 
 
 ; DBB command byte

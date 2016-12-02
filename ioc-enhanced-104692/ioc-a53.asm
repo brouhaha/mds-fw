@@ -4,6 +4,9 @@
 	include	ioc-flp.inc
 	include ioc-mac.inc
 
+	include ioc-ram.inc
+
+
 ; entry points in ROM 2
 
 mget1d	equ    00814h
@@ -14,63 +17,6 @@ mget1d	equ    00814h
 s1009	equ    01009h
 s100c	equ    0100ch
 s1012	equ    01012h
-
-
-; RAM, 4000h..5fffh
-
-rambase	equ	04000h
-
-	org	041eah
-r41ea:	ds	2
-r41ec:	ds	1
-r41ed:	ds	1
-r41ee:	ds	1
-	ds	1
-r41f0:	ds	1
-	ds	2
-r41f3:	ds	1
-	ds	9
-r41fd:	ds	1
-
-crtrows	equ	25
-crtcols	equ	80
-crtsize	equ	crtrows*crtcols
-
-	org	05230h
-scrbeg:	ds	crtsize	; start of screen buffer
-scrend:			; ends at 05a00h (last byte used 059ffh)
-
-	org	05a7ch
-r5a7c:	ds	2
-	ds	2
-	ds	1
-r5a81:	ds	1
-
-	org	05af0h
-	ds	1
-	ds	1
-r5af2:	ds	2
-	ds	1
-crsrfmt	ds	1
-r5af6:	ds	1
-	ds	2
-r5af9:	ds	1
-r5afa:	ds	1
-r5afb:	ds	1
-
-r5d00	equ	05d00h
-
-	org	05f34h
-r5f34	ds	1
-r5f35:	ds	1
-	ds	2
-r5f38:	ds	1
-r5f39:	ds	1
-	ds	6
-r5f40:	ds	1
-
-	org	05ff5h
-r5ff5:			; code, size unknown
 
 
 	org	01800h
@@ -87,7 +33,7 @@ s1818:	jmp	xs1881
 s181b:	jmp	xs1a4f
 
 
-xkeyc:	lda	r5f39
+xkeyc:	lda	crsrow
 	lxi	h,r5af6
 	add	m
 	sui	019h
@@ -113,7 +59,7 @@ l1846:	cpi	020h
 	out	dbbout
 	rc
 
-	lda	r5f38
+	lda	crscol
 	lxi	h,05afbh
 	cmp	m
 	rnz
@@ -603,13 +549,13 @@ s1aef:	add	a
 	jmp	s1012
 
 
-l1afb:	lxi	b,r41f3
+l1afb:	lxi	b,crtstb
 	call	mget1d
 
 l1b01:	out	iocbusy
 	mov	c,a
 	call	r5ff5
-	lxi	h,r41f0
+	lxi	h,intena
 	mov	a,m
 	rrc
 	jnc	l1b14
@@ -637,7 +583,7 @@ l1b1c:	out	iocbusy+1	; XXX why +1
 	cpi	010h
 	jnz	l1ae6
 
-	lxi	b,r41f3
+	lxi	b,crtstb
 	call	mget1d
 l1b3a:	out	iocbusy
 	mov	c,a
