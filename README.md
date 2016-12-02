@@ -38,16 +38,21 @@ and integrated single-density floppy controller, and an 8041 or 8741
 microcontroller which handles the optional printer, paper tape reader,
 paper tape punch, and UPP (Universal PROM Programmer).
 
-There are at least three released versions of the IOC 8080 firmware
+There are at least six released versions of the IOC 8080 firmware:
 
-* original (unenhanced) - part numbers unknown
+* original (unenhanced, 8257 DMAC) - part numbers unknown
+* original (unenhanced, 8237 DMAC) - part numbers unknown
 * enhanced - part numbers 104593-001 through -004
 * enhanced - part numbers 104688-001 through -004
 * enhanced - part numbers 104692-001 through -004
 * IOC-III - uses new version of IOC hardware - part numbers unknown
 
+With the possible exception of the IOC-III, the firmware is supplied
+as four 2616 or 2716 EPROMs, installed in locations E50 through E53.
+
 The enhanced firmware add improved console support with function
-key macros and better cursor control
+key macros and better cursor control, and supports either the 8257 or
+8237 DMA controller.
 
 Presently this project has partially reverse-engineered source code
 for the enhanced IOC, part numbers 104692-00x, in the ioc-enhanced
