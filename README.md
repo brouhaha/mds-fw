@@ -33,10 +33,10 @@ with an 8086 processor board (RPB-86 or RPC-86) added.
 
 ## IOC Firmware
 
-The IOC has an 8080 processor that handles the keyboard, CRT display,
-and integrated single-density floppy controller, and an 8041 or 8741
-microcontroller which handles the optional printer, paper tape reader,
-paper tape punch, and UPP (Universal PROM Programmer).
+With the exception of the Model 210, Series II and Series III MDS
+machines have an IOC module with its own 8080 processor which handles
+the keyboard, CRT display, and integrated single-density floppy
+controller.
 
 There are at least six released versions of the IOC 8080 firmware:
 
@@ -62,6 +62,38 @@ The source code is intended to be assembled using the
 [Macroassembler AS](http://john.ccac.rwth-aachen.de:8000/as/).
 Due to the use of long symbol names, it may not be possible to
 assemble it with native assemblers.
+
+
+## PIO Firmware
+
+THe IOC also has an 8741A "UPI" microcontroller which handles the
+optional printer, paper tape reader, paper tape punch, and UPP
+(Universal PROM Programmer).
+
+Presently this project has partially reverse-engineered source code
+for the PIO, part number 104566-001, in the pio directory.
+
+The pio.asm source code contains conditional assembly directives used
+by the Makefile to assemble three different versions of pio firmware.
+The Intel part numbers of the other two versions are unknown, but they
+were dumped from Series II Model 220 and Model 230 machines.  The
+differences between the versions are fairly minor. The 104566-001
+version is believed to be the most recent, and is expected to work
+properly in any Series II or Series III MDS that uses an IOC module.
+
+
+## Keyboard firmware
+
+The keyboard has an 8741A "UPI" microcontroller which scans the key
+matrix and provides parallel data to be read by the IOC firmware.
+
+Old Series II MDS keyboards have a repeat key for manual repeat, and
+no outo-repeat function. The enhanced keyboard replaces the repeat key
+with a function key, and performs auto-repeat.
+
+Presently this project has partially reverse-engineered source code
+for the enhanced keyboard 8741A, part number 104675-001, in the
+kbd-enhanced directory.
 
 
 ## License information:
