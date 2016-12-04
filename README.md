@@ -28,10 +28,22 @@ floppy controller (not used in all models).  Later models replaced the
 IPB-80 main processor board with an 8085-based IPC-85.
 
 Later Intel introduced the Series III MDS, which was a Series II
-with an 8086 processor board (RPB-86 or RPC-86) added.
+with an 8086 processor board (RPB-86 or RPC-86) added, the iPDS, which
+was a more compact, portable development system, and the Series IV,
+which was significantly different.
 
 
-## IOC Firmware
+## Firmware
+
+This project includes both 8080 code and 8041 UPI reverse-engineered
+source code, which are intended to be assembled using the
+[Macroassembler AS](http://john.ccac.rwth-aachen.de:8000/as/).
+Due to the use of long identifiers, it may not be possible to
+assemble the source code with native assemblers, which are typically
+limited to six-character identifiers.
+
+
+### IOC Firmware
 
 With the exception of the Model 210, Series II and Series III MDS
 machines have an IOC module with its own 8080 processor which handles
@@ -58,17 +70,12 @@ Presently this project has partially reverse-engineered source code
 for the enhanced IOC, part numbers 104692-00x, in the ioc-enhanced
 directory.
 
-The source code is intended to be assembled using the
-[Macroassembler AS](http://john.ccac.rwth-aachen.de:8000/as/).
-Due to the use of long symbol names, it may not be possible to
-assemble it with native assemblers.
 
+### PIO Firmware
 
-## PIO Firmware
-
-THe IOC also has an 8741A "UPI" microcontroller which handles the
-optional printer, paper tape reader, paper tape punch, and UPP
-(Universal PROM Programmer).
+THe IOC also has an masked-ROM 8041A "UPI" microcontroller which
+handles the optional printer, paper tape reader, paper tape punch, and
+UPP (Universal PROM Programmer).
 
 Presently this project has partially reverse-engineered source code
 for the PIO, part number 104566-001, in the pio directory.
@@ -82,18 +89,27 @@ version is believed to be the most recent, and is expected to work
 properly in any Series II or Series III MDS that uses an IOC module.
 
 
-## Keyboard firmware
+### Keyboard firmware
 
-The keyboard has an 8741A "UPI" microcontroller which scans the key
-matrix and provides parallel data to be read by the IOC firmware.
+The keyboard has an EPROM-based 8741A "UPI" microcontroller which
+scans the key matrix and provides parallel data to be read by the IOC
+firmware.
 
-Old Series II MDS keyboards have a repeat key for manual repeat, and
-no outo-repeat function. The enhanced keyboard replaces the repeat key
-with a function key, and performs auto-repeat.
+Old Series II MDS keyboards have a repeat key for manual repeat.  The
+enhanced keyboard replaces the repeat key with a function key, and
+performs auto-repeat.
 
 Presently this project has partially reverse-engineered source code
 for the enhanced keyboard 8741A, part number 104675-001, in the
 kbd-enhanced directory.
+
+Note that the MDS keyboard uses a "bit-paired" arrangement, as common
+for ASCII equipment in the 1960s and 1970s (e.g., Teletype model 33),
+rather than the now-ubiquitous "typewriter-paired" arrangment.  This
+makes use of the MDS keyboard awkward for experienced typists. The key
+matrix position to character code table in the 8741A could be altered,
+and different keycaps installed, to obtain a typewriter-paired
+arrangement.
 
 
 ## License information:
