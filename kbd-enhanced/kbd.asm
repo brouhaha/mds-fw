@@ -22,6 +22,12 @@ fillto	macro	dest,value
 
 ; P27..P20 keyboard column inputs
 
+; TEST0 (pin 1)  - tied directly to ground
+; TEST1 (pin 39) - tied directly to ground
+; XXX not sure why there are any jt[01], jnt[01] instructions,
+;     possibly for a manufacturing test or to support
+;     a different keyboard model
+
 
 ; RAM usage:
 ;   00h..07h:  register bank 0
