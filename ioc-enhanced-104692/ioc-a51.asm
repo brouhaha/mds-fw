@@ -508,7 +508,7 @@ badcmd:	lda	systatb
 
 s09e7:	in	kbdstat
 	sta	r4103
-	rar
+	rar			; rotate kbdobf into carry
 	jnc	l09f9
 
 	in	kbddat
@@ -921,9 +921,10 @@ l0c5f:	lda	r41ef
 	lxi	h,r41ec
 	mvi	m,000h
 l0c78:	call	xs080f
-l0c7b:	in	kbdstat
-	ani	005h
-	cpi	005h
+
+l0c7b:	in	kbdstat		; wait for keyboard data avail and F0 set
+	ani	kbdobf+kbdf0
+	cpi	kbdobf+kbdf0
 	jnz	l0c87
 
 	call	s180f
@@ -940,8 +941,8 @@ l0c96:	in	miscin
 	cpi	kbpres
 	jnz	l0cae
 
-l0c9f:	in	kbdstat
-	ani	004h
+l0c9f:	in	kbdstat		; check that F0 is clear
+	ani	kbdf0
 	cpi	000h
 	jnz	l0cae
 

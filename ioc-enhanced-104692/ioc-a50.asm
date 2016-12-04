@@ -469,13 +469,16 @@ s025c:	lxi	h,04200h
 	jmp	ramtst
 
 
-s0267:	in	miscin
+; Get a character from the keyboard. Waits unit keyboard is
+; present and a key is pressed.
+get_kbd_key:
+	in	miscin
 	ani	kbpres
-	jz	s0267
+	jz	get_kbd_key
 
 	in	kbdstat
-	ani	001h
-	jz	s0267
+	ani	kbdobf
+	jz	get_kbd_key
 
 	in	kbddat
 	ret
@@ -648,7 +651,7 @@ l0314:	sub	a		; CRTC reset command
 	ret
 
 
-s0338:	call	s0267
+s0338:	call	get_kbd_key
 	cpi	014h
 	jz	00000h		; reset
 	ani	0dfh		; fold LC to UC
@@ -748,7 +751,7 @@ l04d8:	call	s080c
 	mvi	m,000h
 	lxi	b,minscr
 	call	s024a
-	call	s0267
+	call	get_kbd_key
 	cpi	'#'
 	jz	l04f7
 	ret
@@ -922,7 +925,7 @@ l0624:	call	s04a4
 
 
 dgkbd:	call	s02c9
-l062b:	call	s0267
+l062b:	call	get_kbd_key
 	sta	r4005
 	sui	01bh
 	adi	0ffh
@@ -1024,7 +1027,7 @@ l06e9:	mvi	a,004h
 
 	lxi	b,mkhasf
 	call	s024a
-l0700:	call	s0267
+l0700:	call	get_kbd_key
 	ani	0dfh		; fold LC to UC
 	sta	r400a
 	lda	r400a
@@ -1039,7 +1042,7 @@ l0713:	lda	r400a
 
 l071e:	lxi	b,mkfprm
 	call	s024a
-l0724:	call	s0267
+l0724:	call	get_kbd_key
 	sta	r400a
 	lhld	r4009
 	mvi	h,000h

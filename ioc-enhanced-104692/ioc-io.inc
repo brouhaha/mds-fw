@@ -25,9 +25,22 @@ testpt	equ	040h	; test point, J18-10
 kbpres	equ	080h	; keyboard present if 1
 
 
+; Keyboard 8741 interface
 kbddat	equ	090h	; read keyboard data
 kbdstat	equ	092h	; read keyboard status
 
+; kbdstat bits
+;kbdst7	equ	080h	; not used
+;kbdst6	equ	040h	; not used
+;kbdst5	equ	020h	; not used
+;kbdst4	equ	010h	; not used
+kbdf1	equ	008h	; keyboard firmware always sets to 1
+kbdf0	equ	004h	; set by 07fh char, cleared by 07ch char
+;kbdibf	equ	002h	; not used
+kbdobf	equ	001h	; keyboard data available
+
+
+; DBB (interface to host processor, normally IPB-80 or IPC-85)
 dbbstat	equ	0a0h	; read DBB status (flags)
 dbbin	equ	0b0h	; read DBB input buffer, reset IBF flag
 
@@ -36,6 +49,7 @@ dbbcd	equ	008h	; command = 0 (host output to port C1), data = 1 (port C0)
 dbbf0	equ	004h	; F0 flag = 1 when IOC busy
 dbbibf	equ	002h	; input buffer full (host has written but IOC hasn't read)
 dbbobf	equ	001h	; output buffer full (IOC has written but host hasn't read)
+
 
 ; 8271 floppy disk controller
 fdcstat	equ	0c0h	; FDC status (in)

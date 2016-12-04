@@ -68,10 +68,12 @@ X0003:	mov	@r0,a
 	inc	r0
 	mov	@r0,#20h
 
-	clr	f1
+	clr	f1		; set f1
 	cpl	f1
-	clr	f0
+
+	clr	f0		; set f0
 	cpl	f0
+
 	jnt1	X0016
 	jmp	X0200
 
@@ -448,10 +450,11 @@ X01c1:	call	send_key
 	jmp	X01a8
 
 
-X01c5:	jf0	X01c8
+X01c5:	jf0	X01c8		; set F0
 	cpl	f0
 X01c8:	jmp	X01a8
-X01ca:	clr	f0
+
+X01ca:	clr	f0		; clear F0
 	jmp	X01a8
 
 X01cd:	mov	a,r2
@@ -460,10 +463,10 @@ X01cd:	mov	a,r2
 
 X01d2:	anl	a,#7fh
 	mov	r2,a
-	add	a,#91h
-	jz	X01c5
-	add	a,#3
-	jz	X01ca
+	add	a,#91h		; is char 07fh (rubout)?
+	jz	X01c5		; yes, set F0
+	add	a,#3		; is char 07ch?
+	jz	X01ca		; yes, clear F0
 	jmp	X01a8
 
 

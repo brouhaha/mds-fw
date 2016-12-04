@@ -86,7 +86,7 @@ l186c:	call	s197e
 	jz	l187c
 
 	in	kbdstat
-	ani	008h
+	ani	kbdf1
 	jnz	l187b
 
 	in	kbddat
@@ -109,7 +109,7 @@ xs1881:	lxi	h,r5f40
 
 	lxi	h,00000h
 l1892:	in	kbdstat
-	rrc
+	rrc			; rotate kbdobf into carry
 	jc	l18a0
 
 	xthl
@@ -124,7 +124,7 @@ l18a0:	in	kbddat
 	rnz
 
 l18a5:	in	kbdstat
-	rrc
+	rrc			; rotate kbdobf into carry
 	jnc	l18a5
 	jmp	l18a0
 
@@ -305,7 +305,7 @@ xs196c:	lxi	h,r41ee
 
 
 s197e:	in	kbdstat
-	rrc
+	rrc			; rotate kbdobf into carry
 	cc	xs18d2
 	lxi	h,r5f35
 	mov	a,m
@@ -589,7 +589,7 @@ l1b3a:	out	iocbusy
 	mov	c,a
 	call	r5ff5
 	in	kbdstat
-	ani	004h
+	ani	kbdf0
 	rz
 
 	in	dbbstat
