@@ -37,7 +37,9 @@ which was significantly different.
 
 This project contains reverse-engineered "source code", with varying degrees
 of completion of the reverse-engineering.  However, all of the source code
-is verified to assemble to the original binary.
+is verified to assemble to the original binary.  The makefile in each
+subdirectory has a "check" target which will compare a SHA256 hash of the
+assembled binary file to the hash of the original firmware.
 
 This includes both 8080 code and 8041 UPI code, which are intended to
 be assembled using the
