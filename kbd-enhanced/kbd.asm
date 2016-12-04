@@ -22,6 +22,22 @@ fillto	macro	dest,value
 
 ; P27..P20 keyboard column inputs
 
+
+; RAM usage:
+;   00h..07h:  register bank 0
+;   08h..0fh:  stack - only four levels available
+;                 hardware supports eight levels, 08h..17h
+;   10h:
+;   11h:       FIFO read pointer
+;   12h:       FIFO write pointer
+;   13h:
+;   14h:
+;   15h:
+;   16h..17h:  unused?
+;   18h..1fh:  register bank 1
+;   20h..2fh:  FIFO data
+;   30h..3fh:
+
 	cpu	8041
 
 reset:	mov	r0,#3fh		; clear all RAM
@@ -30,10 +46,12 @@ X0003:	mov	@r0,a
 	djnz	r0,X0003
 
 	outl	p1,a		; disable keyboard row decoder
-	mov	r0,#11h
+
+	mov	r0,#11h		; init FIFO pointers
 	mov	@r0,#20h
 	inc	r0
 	mov	@r0,#20h
+
 	clr	f1
 	cpl	f1
 	clr	f0
@@ -67,7 +85,6 @@ X0031:	call	X003d
 	jnz	X0018
 	call	X0110
 	jmp	X0016
-
 
 X0039:	call	X0092
 	jmp	X0018
@@ -119,7 +136,7 @@ X0071:	sel	rb1
 	call	X016b
 	jz	X008c
 
-	call	X00a8
+	call	send_key
 	mov	r0,#13h
 	mov	a,r7
 	mov	@r0,a
@@ -158,38 +175,48 @@ X00a1:	mov	@r0,#3fh
 	jmp	X0089
 
 
-X00a8:	jobf	X00b5
-	mov	r0,#12h
+; deal with a new keypress, value in r2
+send_key:
+	jobf	X00b5		; is output buffer already full?
+
+	mov	r0,#12h		; no, data in FIFO?
 	mov	r1,#11h
 	mov	a,@r1
 	xrl	a,@r0
 	jnz	X00b5
-	mov	a,r2
-	out	dbb,a
+
+	mov	a,r2		; FIFO is empty
+	out	dbb,a		; just output byte directly
 	ret
 
-X00b5:	mov	a,r2
+X00b5:	mov	a,r2		; switch to RB1, copying keystroke
 	sel	rb1
 	mov	r2,a
+
+; increment FIFO write pointer, wrapping if necessary
 	mov	r0,#12h
 	mov	a,@r0
 	mov	r3,a
-	xrl	a,#2fh
+	xrl	a,#2fh		; need to wrap?
 	jnz	X00c2
 
-	mov	r3,#1fh
-X00c2:	inc	r3
-	mov	a,r3
-	mov	r1,#11h
-	xrl	a,@r1
-	jz	X00ce
+	mov	r3,#1fh		; yes, wrap before increment
 
+X00c2:	inc	r3		; now increment
 	mov	a,r3
+
+	mov	r1,#11h		; is FIFO full?
+	xrl	a,@r1
+	jz	X00ce		; yes, discard the keystroke
+
+	mov	a,r3		; put incremented addr into FIFO write pointer
 	mov	@r0,a
-	mov	r0,a
+
+	mov	r0,a		; write the keystroke into FIFO
 	mov	a,r2
 	mov	@r0,a
-X00ce:	sel	rb0
+
+X00ce:	sel	rb0		; switch back to rb0 and return
 	ret
 
 
@@ -203,23 +230,28 @@ X00d0:	db	13h
 	db	27h
 
 
-X00d8:	mov	r0,#12h
+; returns with Z flag set if FIFO was empty,
+; otherwise Z flag clear and character in r2
+read_fifo:
+	mov	r0,#12h		; is there data in the FIFO?
 	mov	r1,#11h
 	mov	a,@r1
 	xrl	a,@r0
 	jnz	X00e1
-	ret
+	ret			; no, return
 
-X00e1:	mov	a,@r1
+X00e1:	mov	a,@r1		; increment read pointer, wrapping if needed
 	mov	r0,a
 	xrl	a,#2fh
 	jnz	X00e9
 	mov	r0,#1fh
 
-X00e9:	inc	r0
+X00e9:	inc	r0		; increment
+
 	mov	a,r0
-	mov	@r1,a
-	mov	a,@r0
+	mov	@r1,a		; update read pointer
+
+	mov	a,@r0		; get data from prev (unincr.) location
 	mov	r2,a
 	mov	a,#0ffh
 	ret
@@ -227,7 +259,7 @@ X00e9:	inc	r0
 
 	fillto	0100h,0ffh
 
-	db	00h
+X0100:	db	00h
 	db	02h
 	db	40h
 	db	42h
@@ -245,10 +277,12 @@ X00e9:	inc	r0
 	db	42h
 	
 
-X0110:	jobf	X0110
-	call	X00d8
-	jz	X0118
-	mov	a,r2
+X0110:	jobf	X0110		; wait for output buffer to empty
+
+	call	read_fifo	; read FIFO
+	jz	X0118		; if empty, skip
+
+	mov	a,r2		; write char to output buffer
 	out	dbb,a
 
 X0118:	mov	r0,#10h
@@ -273,12 +307,14 @@ X012e:	rlc	a
 	djnz	r4,X012e
 	anl	a,r3
 	jz	X0159
+
 	sel	rb1
 	mov	r0,#15h
 	mov	a,@r0
 	dec	a
 	mov	@r0,a
 	jnz	X0159
+
 	mov	a,r6
 	mov	@r0,a
 	inc	r0
@@ -287,6 +323,7 @@ X012e:	rlc	a
 	mov	@r0,a
 	jnz	X0159
 	jt1	X0162
+
 	mov	a,#1
 	mov	@r0,a
 	dec	r0
@@ -299,9 +336,11 @@ X014d:	mov	r6,a
 	mov	r5,a
 	call	X016b
 	jz	X0159
-	call	X00a8
+
+	call	send_key
 X0159:	sel	rb0
 	ret
+
 X015b:	call	X0264
 	call	X0220
 	mov	a,r6
@@ -322,18 +361,23 @@ X016b:	mov	a,r7
 	mov	r3,a
 	movp3	a,@a
 	jz	X01a8
+
 	mov	r2,a
 	mov	r0,#10h
 	mov	a,@r0
 	jb4	X01b0
+
 	anl	a,#0ch
 	jz	X0188
+
 	xrl	a,#0ch
 	jz	X01cd
 	jb2	X0188
+
 	mov	a,r2
 	xrl	a,#40h
 	jz	X01a4
+
 X0188:	mov	a,r2
 	anl	a,#80h
 	swap	a
@@ -347,6 +391,7 @@ X0188:	mov	a,r2
 	add	a,#0
 	movp	a,@a
 	jb1	X01a8
+
 	mov	r4,a
 	anl	a,#0c0h
 	orl	a,r3
@@ -354,6 +399,7 @@ X0188:	mov	a,r2
 	anl	a,#7fh
 	xch	a,r4
 	jb0	X01aa
+
 	mov	a,r4
 X01a4:	mov	r2,a
 	mov	a,#0ffh
@@ -367,6 +413,7 @@ X01aa:	mov	a,r4
 	mov	r2,a
 	jmp	X01a4
 
+
 X01b0:	call	X0188
 	mov	a,r2
 	orl	a,#80h
@@ -375,17 +422,20 @@ X01b0:	call	X0188
 	mov	a,@r0
 	anl	a,#4
 	jz	X01c1
+
 	mov	a,r2
 	anl	a,#0bfh
 	mov	r2,a
-X01c1:	call	X00a8
+X01c1:	call	send_key
 	jmp	X01a8
+
 
 X01c5:	jf0	X01c8
 	cpl	f0
 X01c8:	jmp	X01a8
 X01ca:	clr	f0
 	jmp	X01a8
+
 X01cd:	mov	a,r2
 	jb7	X01d2
 	jmp	X01a8
@@ -470,12 +520,16 @@ X024c:	mov	a,r7
 	jz	X0258
 	call	X005f
 	jmp	X0202
+
 X0258:	call	X0092
 	jmp	X0202
+
 X025c:	call	X003d
 	jnz	X0202
 	call	X0110
 	jmp	X0200
+
+
 X0264:	mov	r5,#0
 	clr	a
 	mov	r6,a
@@ -491,6 +545,7 @@ X0264:	mov	r5,#0
 	rl	a
 	mov	r3,a
 X0278:	ret
+
 X0279:	mov	a,@r0
 	anl	a,#38h
 	mov	r3,a
