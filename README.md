@@ -35,12 +35,16 @@ which was significantly different.
 
 ## Firmware
 
-This project includes both 8080 code and 8041 UPI reverse-engineered
-source code, which are intended to be assembled using the
+This project contains reverse-engineered "source code", with varying degrees
+of completion of the reverse-engineering.  However, all of the source code
+is verified to assemble to the original binary.
+
+This includes both 8080 code and 8041 UPI code, which are intended to
+be assembled using the
 [Macroassembler AS](http://john.ccac.rwth-aachen.de:8000/as/).
-Due to the use of long identifiers, it may not be possible to
-assemble the source code with native assemblers, which are typically
-limited to six-character identifiers.
+Due to the use of long identifiers, it may not be possible to assemble
+the source code with native assemblers, which are typically limited to
+six-character identifiers.
 
 
 ### IOC Firmware
@@ -78,7 +82,7 @@ handles the optional printer, paper tape reader, paper tape punch, and
 UPP (Universal PROM Programmer).
 
 Presently this project has partially reverse-engineered source code
-for the PIO, part number 104566-001, in the pio directory.
+for the PIO 8041A, part number 104566-001, in the pio directory.
 
 The pio.asm source code contains conditional assembly directives used
 by the Makefile to assemble three different versions of pio firmware.
