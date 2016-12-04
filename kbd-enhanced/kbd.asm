@@ -25,7 +25,10 @@ fillto	macro	dest,value
 
 ; RAM usage:
 ;   00h..07h:  register bank 0
-;   08h..0fh:  stack - only four levels available
+;     00h         rb0 r0: pointer
+;     01h         rb0 r1: pointer
+;     07h         rb0 r7: keyboard row, 0-7
+;   08h..0fh:  stack - only four levels available (two bytes each)
 ;                 hardware supports eight levels, 08h..17h
 ;   10h:
 ;   11h:       FIFO read pointer
@@ -35,10 +38,17 @@ fillto	macro	dest,value
 ;   15h:
 ;   16h..17h:  unused?
 ;   18h..1fh:  register bank 1
+;     18h         rb1 r0: pointer
+;     19h         rb1 r1: pointer
 ;   20h..2fh:  FIFO data
-;   30h..3fh:
+;   30h..33h:
+;   34h..3bh:
+;   3ch..3fh:
 
 	cpu	8041
+
+; Note that interrupts are not used. If they were, they would jump
+; to locations 0003h (IBF) or 0007h (timer).
 
 reset:	mov	r0,#3fh		; clear all RAM
 	clr	a
@@ -70,7 +80,7 @@ X0018:	call	X0026
 	jmp	X0018
 
 
-X0026:	mov	a,#X00d0 & 0ffh
+X0026:	mov	a,#kbd_row_drive_table & 0ffh
 	add	a,r7
 	movp	a,@a
 	outl	p1,a		; select keyboard row
@@ -220,14 +230,16 @@ X00ce:	sel	rb0		; switch back to rb0 and return
 	ret
 
 
-X00d0:	db	13h
-	db	33h
-	db	0bh
-	db	2bh
-	db	1bh
-	db	3bh
-	db	07h
-	db	27h
+; keyboard row drive table
+kbd_row_drive_table:	; SW row  HW row   P16..P12  P11..P10 = 11
+	db	13h  	;   0       2        0100
+	db	33h	;   1       3        1100
+	db	0bh	;   2       4        0010
+	db	2bh	;   3       5        1010
+	db	1bh	;   4       6        0110
+	db	3bh	;   5       7        1110
+	db	07h	;   6       8        0001      
+	db	27h	;   7       9        1001
 
 
 ; returns with Z flag set if FIFO was empty,
