@@ -77,6 +77,17 @@ for the enhanced IOC, part numbers 104692-00x, in the ioc-enhanced
 directory.
 
 
+### Character Generator
+
+The IOC has a 2708 (or 2608) EPROM used as the character generator
+for the CRT. The characters are 6x8 pixels, but some pixels may be
+shifted a half pixel position to the right, under the control of the
+two LSBs of the EPROM data.
+
+In the chargen directory there is a Python 3 script "view" which
+renders the character set in a PDF table.
+
+
 ### PIO Firmware
 
 THe IOC also has an masked-ROM 8041A "UPI" microcontroller which
