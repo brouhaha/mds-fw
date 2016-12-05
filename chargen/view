@@ -72,6 +72,10 @@ class View:
                 if (h >= 3) and delay_right:
                     pixel_left += cell_width/16
                 pixel_right = pixel_left + cell_width/8
+                if (h == 3) and (not delay_left) and delay_right:
+                    pixel_left -= cell_width/16
+                #if (h == 2) and (not delay_left) and delay_right:
+                #    pixel_right += cell_width/16
                 bit = (byte >> (7-h)) & 1
                 if bit:
                     context.move_to(pixel_left,  pixel_top)
