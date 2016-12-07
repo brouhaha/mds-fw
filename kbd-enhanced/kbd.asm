@@ -1,4 +1,5 @@
-; Intel Intellec Series II/III MDS keyboard controller (KBD) 8741A
+; Intel Intellec Series II/III MDS enhaned keyboard controller 8741A,
+; Intel part number 104675-001
 
 ; (partially) reverse engineered by Eric Smith <spacewar@gmail.com>
 
@@ -578,7 +579,7 @@ X0279:	mov	a,@r0
 
 ; keyboard mapping tables
 ; 300-33f unshifted
-; 240-37f shifted
+; 340-37f shifted
 
 defkey	macro	uns,shf
 	db	uns
@@ -668,7 +669,7 @@ defkey	macro	uns,shf
 	defkey	000h,000h	; no key
 	defkey	000h,000h	; no key
 
-	org	$+080h
+	org	$+040h
 
 	fillto	03eeh,0ffh
 

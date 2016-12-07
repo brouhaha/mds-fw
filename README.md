@@ -117,8 +117,9 @@ enhanced keyboard replaces the repeat key with a function key, and
 performs auto-repeat.
 
 Presently this project has partially reverse-engineered source code
-for the enhanced keyboard 8741A, part number 104675-001, in the
-kbd-enhanced directory.
+for the unenhanced keyboard 8741A, part number 9100101, in the kbd
+directory, and for the enhanced keyboard 8741A, part number 104675-001,
+in the kbd-enhanced directory.
 
 Note that the MDS keyboard uses a "bit-paired" arrangement, as common
 for ASCII equipment in the 1960s and 1970s (e.g., Teletype model 33),
