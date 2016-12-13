@@ -347,24 +347,24 @@ cmd0x:	mov	a,r6
 	add	a,#ctbl0x & 0ffh
 	jmpp	@a
 
-ctbl0x:	db	reset & 0ffh	; pacify - reset PIO and its devices
-	db	ereset & 0ffh	; ereset - reset device-generated error
-	db	systat & 0ffh	; systat - get subsystem status byte
-	db	dstat & 0ffh	; dstat - get device status byte
-	db	srqdak & 0ffh	; srqdak - device interrupt acknowledge
-	db	srqack & 0ffh	; srqack
-	db	srq & 0ffh	; srq
-	db	decho & 0ffh	; decho
-	db	xcsmem & 0ffh	; csmem
-	db	xtram & 0ffh	; tram
-	db	xsint & 0ffh	; sint
+ctbl0x:	db	pacify & 0ffh	; 00h pacify - reset PIO and devices
+	db	ereset & 0ffh	; 01h ereset - reset device-generated error
+	db	systat & 0ffh	; 02h systat - get subsystem status byte
+	db	dstat & 0ffh	; 03h dstat  - get device status byte
+	db	srqdak & 0ffh	; 04h srqdak - device interrupt acknowledge
+	db	srqack & 0ffh	; 05h srqack - clear interrupt request
+	db	srq & 0ffh	; 06h srq    - generate int req to master
+	db	decho & 0ffh	; 07h decho  - echo byte from master
+	db	xcsmem & 0ffh	; 08h csmem  - checksum ROM
+	db	xtram & 0ffh	; 09h tram   - test RAM
+	db	xsint & 0ffh	; 0ah sint   - enable specified interrupt
 
 ; remainder undefined
-	db	badc0x & 0ffh
-	db	badc0x & 0ffh
-	db	badc0x & 0ffh
-	db	badc0x & 0ffh
-	db	badc0x & 0ffh
+	db	badc0x & 0ffh	; 0bh
+	db	badc0x & 0ffh	; 0ch
+	db	badc0x & 0ffh	; 0dh
+	db	badc0x & 0ffh	; 0eh
+	db	badc0x & 0ffh	; 0fh
 
 xcsmem:	jmp	csmem
 
@@ -375,7 +375,8 @@ xsint:	jmp	sint
 badc0x:	jmp	badc1x
 
 
-reset:
+reset:		; power-on reset
+pacify:		; pacify (00h) command - reset PIO and devices
 	if	mod220 | mod230
 	dis	i
 	endif
@@ -428,10 +429,12 @@ X015e:	mov	@r0,a
 X016b:	retr
 
 
-ereset:	jmp	badc1x
+ereset:		; ereset (01h) command - reset device-generated error
+	jmp	badc1x
 
 
-systat:	mov	r0,#22h		; merge MSB of device status bytes from r22 through r25
+systat:		; systat (02h) commnad - get subsystem status byte
+	mov	r0,#22h		; merge MSB of device status bytes from r22 through r25
 	mov	a,@r0
 	mov	r0,#23h
 	orl	a,@r0
@@ -450,7 +453,8 @@ X0181:	clr	a
 	out	dbb,a
 	jmp	X005c
 
-dstat:	mov	r0,#22h		
+dstat:		; dstat (03h) commnad - get device status byte
+	mov	r0,#22h		
 	mov	a,@r0
 	mov	r1,#0f0h
 	anl	a,r1
@@ -486,8 +490,9 @@ X01b2:	clr	a
 	jmp	X005c
 
 
-; command 004h - device interrupt acknowledge
-srqdak:	mov	r5,#8
+
+srqdak:		; srqdak (04h) command - device interrupt acknowledge
+	mov	r5,#8
 	jmp	X0059
 
 ; data byte received for srqdak command
@@ -516,8 +521,9 @@ X01d9:	anl	p2,#7fh
 	jmp	X005c
 
 
-; command 005h - reset all device interrupt bits, and interrupt signal to master
-srqack:	clr	a
+; srqack (05h) command - reset all device interrupt bits, and interrupt signal to master
+srqack:
+	clr	a
 	mov	r0,#26h
 	mov	@r0,a
 	mov	r0,#21h
@@ -528,12 +534,12 @@ srqack:	clr	a
 	jmp	X005c
 
 
-; command 006h - generate hardware interrupt
+; srq (06h) command - generate hardware interrupt
 srq:	orl	p2,#80h		; enable interrupt to master
 	jmp	X005c
 
 
-; command 007h
+; decho (07h) command - echo byte from master
 decho:	mov	r5,#9
 	jmp	X0059
 
@@ -550,7 +556,7 @@ getrp1:	movp	a,@a
 
 	fillto	0200h,000h
 
-; command 008h
+; csmem (08h) command - checksum ROM
 csmem:	clr	c
 	clr	a
 	mov	r3,a
@@ -602,7 +608,7 @@ X0227:	mov	a,#0ffh		; ROM checksum bad, return 0ffh
 	jmp	X0059
 
 
-; command 009h
+; tram (09h) command - test RAM
 tram:	sel	rb0
 	mov	r0,#3fh
 	mov	a,#55h
@@ -634,12 +640,16 @@ X0252:	mov	a,#0ffh		; RAM bad, return 0ffh
 	jmp	reset
 
 
-; command 00ah
+; sint (0ah) command - enable specified interrupt
 sint:	mov	r5,#0ah
 	jmp	X0059
 
-
 ; data byte received for sint command
+;    bits 7..4  reserved
+;    bit 3:     documented as reserved, but not masked off below
+;    bit 2:     interrupt enable for paper tape reader
+;    bit 1:     interrupt enable for line printer
+;    bit 0:     interrupt enable for paper tape punch
 dsint:	mov	r0,#28h
 	mov	a,r7
 	anl	a,#0fh		; note low *four* bits preserved
@@ -661,30 +671,30 @@ cmd1x:	add	a,#ctbl1x & 0ffh
 
 ctbl1x:
 ; paper tape reader
-	db	rdrc & 0ffh	; rdrc
-	db	rstc & 0ffh	; rstc
+	db	rdrc & 0ffh	; 10h rdrc - read byte or move one frame fwd/rev
+	db	rstc & 0ffh	; 11h rstc - read status byte
 
 ; paper tape punch
-	db	punc & 0ffh	; punc
-	db	pstc & 0ffh	; pstc
+	db	punc & 0ffh	; 12h punc - punch one byte
+	db	pstc & 0ffh	; 13h pstc - read status byte
 
 ; printer
-	db	xlptc & 0ffh	; lptc
-	db	xlstc & 0ffh	; lstc
+	db	xlptc & 0ffh	; 14h lptc - print one byte
+	db	xlstc & 0ffh	; 15h lstc - read status byte
 
 ; PROM programmer
-	db	xwppc & 0ffh	; wppc
-	db	xrppc & 0ffh	; rppc
-	db	xrpstc & 0ffh	; rpstc
-	db	xrdpdc & 0ffh	; rdpdc
+	db	xwppc & 0ffh	; 16h wppc - send two addr/ctl, write one byte
+	db	xrppc & 0ffh	; 17h rppc - send two addr/ctl, read one byte
+	db	xrpstc & 0ffh	; 18h rpstc - read two status bytes
+	db	xrdpdc & 0ffh	; 19h rdpdc - read data byte
 
 ; remainder undefined
-	db	badc1x & 0ffh
-	db	badc1x & 0ffh
-	db	badc1x & 0ffh
-	db	badc1x & 0ffh
-	db	badc1x & 0ffh
-	db	badc1x & 0ffh
+	db	badc1x & 0ffh	; 1ah
+	db	badc1x & 0ffh	; 1bh
+	db	badc1x & 0ffh	; 1ch
+	db	badc1x & 0ffh	; 1dh
+	db	badc1x & 0ffh	; 1eh
+	db	badc1x & 0ffh	; 1fh
 
 
 xlptc:	jmp	lptc
@@ -700,8 +710,8 @@ xrpstc:	jmp	rpstc
 xrdpdc:	jmp	rdpdc
 
 
-; command 010h
-; read data byte if bits 6 of command is zero
+; rdrc (10h) command
+; read data byte if bit 6 of command is zero
 ; move tape forward one frame if bit 6 is zero and bit 5 is zero
 ; move tape backward one frame if bit 6 is one and bit 5 is one
 rdrc:	mov	r5,#0
@@ -745,14 +755,19 @@ X02be:	mov	a,#80h
 	jmp	X005c
 
 
-; command 011h
+; rstc (11h) command - get reader status byte
+;    bit 7:     reader timeout
+;    bit 6:     illegal status request (rstc command w/ request interrupt)
+;    bits 5..2: reserved
+;    bit 1:     systems ready
+;    bit 0:     data ready
 rstc:	mov	r0,#22h
 	call	X03d2
 	anl	a,#4
 	jmp	X0337
 
 
-; command 012h
+; punc (12h) command - punch one byte
 punc:	mov	r5,#1
 	jmp	X0059
 
@@ -776,7 +791,13 @@ dpunc:	mov	r5,#0
 X02ea:	jmp	X005c
 
 
-; command 003h
+; pstc (13h) command - get punch status byte
+;    bit 7:     punch timeout
+;    bit 6:     illegal status request (pstc command w/ request interrupt)
+;    bit 5:     illegal command (punc command followed by a command byte)
+;    bits 4..2: reserved
+;    bit 1:     systems ready
+;    bit 0:     punch ready
 pstc:	mov	r0,#23h
 	call	X03d2
 	anl	a,#1
@@ -795,11 +816,11 @@ X0300:	jmp	X005c
 X0302:	jmp	X02be
 
 
-; command 014h
+; lptc (14h) command - print one byte
 lptc:	mov	r5,#2
 	jmp	X0059
 
-; data byte received fro lptc command
+; data byte received for lptc command
 dlptc:	mov	r5,#0
 	mov	r1,#24h
 	mov	r4,#10h
@@ -818,7 +839,14 @@ dlptc:	mov	r5,#0
 	jmp	X0053
 
 
-; command 015h
+; lstc (15h) command - get printer status byte
+;    bit 7:     printer timeout
+;    bit 6:     illegal status request (lstc command w/ request interrupt)
+;    bit 5:     illegal command (lptc command followed by a command byte)
+;    bits 4..3: reserved
+;    bit 2:     printer selected
+;    bit 1:     printer present
+;    bit 0:     printer ready
 lstc:	mov	r0,#24h
 	call	X03d2
 	anl	a,#50h
@@ -849,25 +877,25 @@ X0339:	mov	r1,a
 	jmp	X005c
 
 
-; command 016h
+; wppc (16h) command - send two addr/ctl, write one data byte
 wppc:	mov	r5,#3
 	jmp	X0059
 
-; first data byte received for wppc comand
+; first byte (addr/ctl 1) received for wppc comand
 d1wppc:	mov	r5,#4
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
 
-; second data byte received for wppc command
+; second byte (addr/ctl 2) received for wppc command
 d2wppc:	mov	r5,#5
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f2h
 	jmp	X0053
 
-; third data byte received for wppc command
+; third byte (data) received for wppc command
 d3wppc:	mov	r5,#0
 	mov	r1,#25h
 	call	X03c9
@@ -882,18 +910,18 @@ d3wppc:	mov	r5,#0
 	jmp	X0053
 
 
-; command 017h
+; rppc (017h) command - send two addr/ctl, read one data byte
 rppc:	mov	r5,#6
 	jmp	X0059
 
-; first data byte received for rppc command
+; first byte (addr/ctl) received for rppc command
 d1rppc:	mov	r5,#7
 	mov	a,r7
 	outl	p1,a
 	anl	p2,#0f1h
 	jmp	X0053
 
-; second data byte received for rppc command
+; second byte (addr/ctl) received for rppc command
 d2rppc:	mov	r5,#0
 	mov	a,r7
 	outl	p1,a
@@ -901,9 +929,10 @@ d2rppc:	mov	r5,#0
 	anl	p2,#0efh
 	orl	p2,#10h
 	orl	p2,#7fh
+; fall into rdpdc command
 
 
-; command 019h
+; rdpdc (19h) command - read data byte
 rdpdc:	mov	a,#8
 	call	X00ec
 	orl	p1,#0ffh
@@ -919,7 +948,7 @@ rdpdc:	mov	a,#8
 X039f:	jmp	X0055
 
 
-; command 018h
+; rpstc (18h) command - read two status bytes
 rpstc:	mov	r0,#25h
 	mov	r5,#0
 	call	X03c9
